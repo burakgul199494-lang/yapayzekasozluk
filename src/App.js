@@ -1,28 +1,53 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search,
-  Book,
-  Layers,
-  MessageSquare,
+  ArrowLeft,
+  Calendar,
+  Upload,
   AlertCircle,
-  Sparkles,
-  Database,
-  Globe,
-  Cpu,
-  X,
+  ChevronRight,
+  TrendingUp,
+  Box,
+  Activity,
+  CheckCircle2,
+  Truck,
+  Smartphone,
+  Mail,
+  FileText,
+  Lock,
+  Save,
+  LogOut,
+  Grid,
+  Plus,
+  Trash2,
+  RotateCcw,
+  Layers,
+  AlertTriangle,
+  Download,
+  UploadCloud,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
+
+// --- FIREBASE IMPORTS ---
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  getAuth,
+  signInWithCustomToken,
+  signInAnonymously,
+  onAuthStateChanged,
+} from "firebase/auth";
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  onSnapshot,
+} from "firebase/firestore";
 
-// ==========================================
-// 1. YAPAY ZEKA (GEMINI) ANAHTARI
-// ==========================================
-const geminiApiKey = "AIzaSyBhH9dJ55Qg5BCF2Kv7sGSdvlci5w-v7Jw";
-
-// ==========================================
-// 2. FIREBASE AYARLARI
-// ==========================================
+// --- FIREBASE SETUP ---
+// GitHub'da kullanacağınız gerçek yapılandırma
 const firebaseConfig = {
   apiKey: "AIzaSyAeBBWnSENJtqZrySuT5K5TKyQaypVx_Sk",
   authDomain: "yapayzekasozluk-2b59a.firebaseapp.com",
@@ -33,517 +58,1219 @@ const firebaseConfig = {
   measurementId: "G-JJ3RNEXG37",
 };
 
-// Firebase Başlatma
+// Uygulamayı başlat
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "yapayzekasozluk-v3"; // Sabit App ID
 
-// --- KELİME KÖKÜ MANTIĞI (YARDIMCI LİSTE) ---
-const wordMappings = {
-  sat: "sit",
-  sitting: "sit",
-  sits: "sit",
-  went: "go",
-  gone: "go",
-  going: "go",
-  goes: "go",
-  ate: "eat",
-  eaten: "eat",
-  took: "take",
-  taken: "take",
-  wrote: "write",
-  written: "write",
-  better: "good",
-  best: "good",
-  mice: "mouse",
-  feet: "foot",
-  children: "child",
-  bought: "buy",
-  flies: "fly",
-  flew: "fly",
-  flown: "fly",
-  ran: "run",
-  running: "run",
-  saw: "see",
-  seen: "see",
-  seeing: "see",
-  happier: "happy",
-  happiest: "happy",
+// Veritabanı yolu için sabit bir ID (Verilerinizin karışmaması için)
+const appId = "kargo-takip-v1";
+
+// --- Format Helper ---
+const formatNumber = (num) => {
+  if (num === undefined || num === null || num === "") return "-";
+  const n = parseFloat(num);
+  if (isNaN(n)) return "-";
+  return n.toFixed(2).replace(".", ",");
+};
+
+const MONTH_NAMES = [
+  "",
+  "Oca",
+  "Şub",
+  "Mar",
+  "Nis",
+  "May",
+  "Haz",
+  "Tem",
+  "Ağu",
+  "Eyl",
+  "Eki",
+  "Kas",
+  "Ara",
+];
+
+// --- Veri Tipleri Tanımı ---
+const METRIC_TYPES = [
+  { id: "teslimPerformansi", label: "Teslim Perf. %", color: "blue" },
+  { id: "rotaOrani", label: "Rota Oranı %", color: "indigo" },
+  { id: "tvsOrani", label: "TVS Oranı %", color: "indigo" },
+  { id: "checkInOrani", label: "Check-in %", color: "indigo" },
+  { id: "smsOrani", label: "SMS Oranı %", color: "orange" },
+  { id: "eAtfOrani", label: "E-ATF Oranı %", color: "orange" },
+  { id: "elektronikIhbar", label: "E-İhbar %", color: "orange" },
+  { id: "gelenKargo", label: "Gelen Kargo", color: "green" },
+  { id: "gidenKargo", label: "Giden Kargo", color: "green" },
+];
+
+// --- Birim Listesi (Sabit) ---
+const UNITS = [
+  "BÖLGE",
+  "ADASAN",
+  "ADATEPE",
+  "ALAÇATI",
+  "ARMUTALAN",
+  "ASTİM",
+  "AYDIN DDN",
+  "AYRANCILAR",
+  "BELDİBİ",
+  "BELEN",
+  "ÇAMKÖY",
+  "ÇEŞME",
+  "ÇİNE",
+  "DALAMAN",
+  "DATÇA",
+  "DAVUTLAR",
+  "DİDİM",
+  "DOKUZEYLÜL",
+  "EFELER",
+  "EGESER",
+  "FETHİYE",
+  "GÖCEK",
+  "GÖLKÖY",
+  "GÜMÜŞLÜK",
+  "GÜNDOĞAN",
+  "GÜVERCİNLİK",
+  "HALİKARNAS",
+  "KALABAK DDN",
+  "KARYA",
+  "KAYMAKKUYU",
+  "KISIKKÖY",
+  "KONACIK",
+  "KÖTEKLİ",
+  "KÖYCEĞİZ",
+  "KUŞADASI",
+  "LİKYA",
+  "LİMANTEPE İRT",
+  "LODOS DDN",
+  "MARMARİS İRT",
+  "MENDERES",
+  "MİLAS",
+  "MORDOĞAN",
+  "MUMCULAR",
+  "NAZİLLİ",
+  "NYSA",
+  "ORTACA",
+  "ORTAKENT",
+  "ÖDEMİŞ",
+  "RÜZGAR",
+  "SARNIÇ",
+  "SELÇUK",
+  "SÖKE",
+  "ŞİRİNYER",
+  "TEPEKÖY",
+  "TINAZTEPE",
+  "TİRE",
+  "TORBA DDN",
+  "TORBALI",
+  "TURGUTREİS",
+  "UMURBEY",
+  "URLA",
+  "ÜÇGÖZLER",
+  "YALIKAVAK",
+  "YATAĞAN",
+  "YELKEN",
+  "YENİGÜN",
+  "YENİHİSAR",
+  "ZEYBEK",
+];
+
+// --- Components ---
+
+const KPICard = ({
+  title,
+  value,
+  suffix = "",
+  color = "slate",
+  icon: Icon,
+}) => (
+  <div
+    className={`bg-white p-2.5 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden min-h-[90px] ${
+      color === "red" ? "border-red-200 bg-red-50" : "border-slate-100"
+    }`}
+  >
+    <div
+      className={`absolute top-1 right-1 opacity-20 ${
+        color === "red" ? "text-red-500" : `text-${color}-500`
+      }`}
+    >
+      {Icon && <Icon size={24} />}
+    </div>
+    <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider z-10 leading-tight">
+      {title}
+    </span>
+    <div className="flex items-baseline mt-2 z-10">
+      <span
+        className={`text-lg font-bold ${
+          color === "red" ? "text-red-600" : `text-${color}-600`
+        }`}
+      >
+        {formatNumber(value)}
+      </span>
+      <span className="text-slate-400 ml-0.5 text-[10px]">{suffix}</span>
+    </div>
+  </div>
+);
+
+// --- ADMIN PANEL COMPONENT ---
+const AdminPanel = ({
+  allData,
+  onSave,
+  onClose,
+  onResetAll,
+  availableYears,
+  setAvailableYears,
+  userId,
+  isSaving,
+  onSaveBatch,
+  onImportLocal,
+}) => {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMetric, setSelectedMetric] = useState("teslimPerformansi");
+  const [gridData, setGridData] = useState({});
+  const fileInputRef = useRef(null);
+
+  // Auto-save status
+  const [lastSaved, setLastSaved] = useState(Date.now());
+  const [pendingChanges, setPendingChanges] = useState(false);
+
+  const [selection, setSelection] = useState({
+    start: null,
+    end: null,
+    isDragging: false,
+  });
+
+  const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+  // Veriyi Hazırla
+  useEffect(() => {
+    const newGrid = {};
+    UNITS.forEach((unit) => {
+      newGrid[unit] = {};
+      MONTH_INDICES.forEach((month) => {
+        const record = allData.find(
+          (d) =>
+            d.unit === unit &&
+            d.year === parseInt(selectedYear) &&
+            d.month === month
+        );
+        newGrid[unit][month] = record ? record[selectedMetric] ?? "" : "";
+      });
+    });
+    setGridData(newGrid);
+  }, [selectedYear, selectedMetric, allData]);
+
+  // AUTO-SAVE LOGIC
+  useEffect(() => {
+    if (!pendingChanges) return;
+
+    const timer = setTimeout(() => {
+      handleSave();
+      setPendingChanges(false);
+      setLastSaved(Date.now());
+    }, 2000); // 2 saniye hareketsizlikten sonra kaydet
+
+    return () => clearTimeout(timer);
+  }, [gridData, pendingChanges]);
+
+  // Global mouse up
+  useEffect(() => {
+    const handleWindowMouseUp = () => {
+      if (selection.isDragging) {
+        setSelection((prev) => ({ ...prev, isDragging: false }));
+      }
+    };
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    return () => window.removeEventListener("mouseup", handleWindowMouseUp);
+  }, [selection.isDragging]);
+
+  const handleInputChange = (unit, month, value) => {
+    setGridData((prev) => ({
+      ...prev,
+      [unit]: {
+        ...prev[unit],
+        [month]: value,
+      },
+    }));
+    setPendingChanges(true);
+  };
+
+  // --- MOUSE SELECTION HANDLERS ---
+  const handleMouseDown = (r, c) => {
+    setSelection({ start: { r, c }, end: { r, c }, isDragging: true });
+  };
+
+  const handleMouseEnter = (r, c) => {
+    if (selection.isDragging) {
+      setSelection((prev) => ({ ...prev, end: { r, c } }));
+    }
+  };
+
+  const isCellSelected = (r, c) => {
+    if (!selection.start || !selection.end) return false;
+    const minR = Math.min(selection.start.r, selection.end.r);
+    const maxR = Math.max(selection.start.r, selection.end.r);
+    const minC = Math.min(selection.start.c, selection.end.c);
+    const maxC = Math.max(selection.start.c, selection.end.c);
+    return r >= minR && r <= maxR && c >= minC && c <= maxC;
+  };
+
+  // --- EXCEL PASTE HANDLER ---
+  const handlePaste = (e, startUnitIndex, startMonthIndex) => {
+    e.preventDefault();
+    const clipboardData = e.clipboardData.getData("text");
+    const rows = clipboardData
+      .split(/\r\n|\n|\r/)
+      .filter((row) => row.trim() !== "");
+
+    setGridData((prev) => {
+      const newData = { ...prev };
+      rows.forEach((row, rowIndex) => {
+        const targetUnitIndex = startUnitIndex + rowIndex;
+        if (targetUnitIndex >= UNITS.length) return;
+
+        const unitName = UNITS[targetUnitIndex];
+        const cells = row.split("\t");
+
+        if (!newData[unitName]) newData[unitName] = {};
+
+        cells.forEach((cellValue, cellIndex) => {
+          const targetMonthArrIndex = startMonthIndex + cellIndex;
+          if (targetMonthArrIndex >= MONTH_INDICES.length) return;
+
+          const month = MONTH_INDICES[targetMonthArrIndex];
+          let cleanValue = cellValue.trim().replace(",", ".");
+          if (cleanValue === "") cleanValue = "";
+
+          newData[unitName][month] = cleanValue;
+        });
+      });
+      return newData;
+    });
+    setPendingChanges(true);
+  };
+
+  // --- KEYBOARD HANDLERS ---
+  const handleKeyDown = (e, unitIndex, monthIndex) => {
+    if (e.key === "Delete") {
+      e.preventDefault();
+      if (selection.start && selection.end) {
+        const minR = Math.min(selection.start.r, selection.end.r);
+        const maxR = Math.max(selection.start.r, selection.end.r);
+        const minC = Math.min(selection.start.c, selection.end.c);
+        const maxC = Math.max(selection.start.c, selection.end.c);
+
+        setGridData((prev) => {
+          const newData = { ...prev };
+          for (let r = minR; r <= maxR; r++) {
+            const unitName = UNITS[r];
+            if (newData[unitName]) {
+              newData[unitName] = { ...newData[unitName] };
+              for (let c = minC; c <= maxC; c++) {
+                const month = MONTH_INDICES[c];
+                newData[unitName][month] = "";
+              }
+            }
+          }
+          return newData;
+        });
+        setPendingChanges(true);
+      } else {
+        const month = MONTH_INDICES[monthIndex];
+        handleInputChange(UNITS[unitIndex], month, "");
+      }
+      return;
+    }
+
+    let nextUnitIndex = unitIndex;
+    let nextMonthIndex = monthIndex;
+    let move = false;
+
+    if (e.key === "ArrowRight") {
+      move = true;
+      if (monthIndex < 11) nextMonthIndex++;
+    } else if (e.key === "ArrowLeft") {
+      move = true;
+      if (monthIndex > 0) nextMonthIndex--;
+    } else if (e.key === "ArrowDown") {
+      move = true;
+      if (unitIndex < UNITS.length - 1) nextUnitIndex++;
+    } else if (e.key === "ArrowUp") {
+      move = true;
+      if (unitIndex > 0) nextUnitIndex--;
+    }
+
+    if (move) {
+      e.preventDefault();
+      const month = MONTH_INDICES[nextMonthIndex];
+      const nextId = `cell-${nextUnitIndex}-${month}`;
+      const element = document.getElementById(nextId);
+      if (element) {
+        element.focus();
+        element.select();
+        setSelection({
+          start: { r: nextUnitIndex, c: nextMonthIndex },
+          end: { r: nextUnitIndex, c: nextMonthIndex },
+          isDragging: false,
+        });
+      }
+    }
+  };
+
+  const handleFocus = (e, r, c) => {
+    e.target.select();
+    if (!selection.isDragging) {
+      setSelection({ start: { r, c }, end: { r, c }, isDragging: false });
+    }
+  };
+
+  const handleAddYear = () => {
+    const nextYear = availableYears[availableYears.length - 1] + 1;
+    setAvailableYears([...availableYears, nextYear]);
+    setSelectedYear(nextYear);
+  };
+
+  const clearTable = () => {
+    if (
+      window.confirm(
+        `DİKKAT: ${selectedYear} yılı için Görüntülenen Tabloyu temizlemek üzeresiniz.`
+      )
+    ) {
+      const newGrid = {};
+      UNITS.forEach((unit) => {
+        newGrid[unit] = {
+          1: "",
+          2: "",
+          3: "",
+          4: "",
+          5: "",
+          6: "",
+          7: "",
+          8: "",
+          9: "",
+          10: "",
+          11: "",
+          12: "",
+        };
+      });
+      setGridData(newGrid);
+      setPendingChanges(true);
+    }
+  };
+
+  const handleGlobalReset = async () => {
+    if (
+      window.confirm(
+        "⚠️ DİKKAT: Tüm veriler (Bütün yıllar, bütün birimler) kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Emin misiniz?"
+      )
+    ) {
+      if (
+        window.confirm(
+          "Son uyarı: Veritabanı tamamen sıfırlanacak. Onaylıyor musunuz?"
+        )
+      ) {
+        onResetAll();
+      }
+    }
+  };
+
+  // --- BACKUP & RESTORE ---
+  const handleDownloadBackup = () => {
+    const dataStr = JSON.stringify(allData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `performans_yedek_${new Date()
+      .toISOString()
+      .slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleUploadBackup = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        if (Array.isArray(importedData)) {
+          onSave(importedData); // Save to state & localStorage
+          alert("Yedek başarıyla yüklendi! Ekran güncelleniyor...");
+        } else {
+          alert(
+            "Hatalı dosya formatı! Lütfen geçerli bir JSON yedek dosyası seçin."
+          );
+        }
+      } catch (err) {
+        alert("Dosya okunamadı: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null;
+  };
+
+  const handleSave = () => {
+    let updatedData = [...allData];
+    UNITS.forEach((unit) => {
+      MONTH_INDICES.forEach((month) => {
+        const value = gridData[unit][month];
+        const cleanValueStr = String(value).trim().replace(",", ".");
+        const numValue =
+          cleanValueStr === "" || cleanValueStr === "undefined"
+            ? null
+            : parseFloat(cleanValueStr);
+
+        const existingIndex = updatedData.findIndex(
+          (d) =>
+            d.unit === unit &&
+            d.year === parseInt(selectedYear) &&
+            d.month === month
+        );
+        const finalValue =
+          numValue === null
+            ? null
+            : selectedMetric.includes("Kargo")
+            ? parseInt(cleanValueStr)
+            : numValue;
+
+        if (existingIndex >= 0) {
+          updatedData[existingIndex] = {
+            ...updatedData[existingIndex],
+            [selectedMetric]: finalValue,
+          };
+        } else if (numValue !== null) {
+          const newRecord = {
+            id: `${unit}-${selectedYear}-${month}`,
+            unit: unit,
+            year: parseInt(selectedYear),
+            month: month,
+            teslimPerformansi: "",
+            rotaOrani: "",
+            tvsOrani: "",
+            checkInOrani: "",
+            smsOrani: "",
+            eAtfOrani: "",
+            elektronikIhbar: "",
+            gelenKargo: "",
+            gidenKargo: "",
+            [selectedMetric]: finalValue,
+          };
+          updatedData.push(newRecord);
+        }
+      });
+    });
+    onSaveBatch(updatedData); // Direct update
+  };
+
+  return (
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between shadow-md gap-2">
+        <div className="flex items-center gap-3">
+          <Grid className="text-blue-400" size={24} />
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold">Yıllık Veri Girişi</h2>
+              {pendingChanges && (
+                <span className="text-xs bg-yellow-500 text-black px-2 py-0.5 rounded animate-pulse">
+                  Kaydediliyor...
+                </span>
+              )}
+              {!pendingChanges && (
+                <span className="text-xs text-slate-400">
+                  Son kayıt: {new Date(lastSaved).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">
+              Excel Modu (Kopyala & Yapıştır) - Otomatik Kayıt Aktif
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex bg-slate-800 rounded-lg p-1 mr-2">
+            <button
+              onClick={handleDownloadBackup}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors"
+              title="Verileri Bilgisayara İndir"
+            >
+              <Download size={14} /> Yedekle
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-md transition-colors"
+              title="Yedekten Geri Yükle"
+            >
+              <UploadCloud size={14} /> Yükle
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleUploadBackup}
+              className="hidden"
+              accept=".json"
+            />
+          </div>
+
+          <button
+            onClick={onImportLocal}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-bold transition-colors shadow-md"
+            title="Eski tarayıcı verilerini buluta yükle"
+          >
+            <RefreshCw size={16} /> Eski Verileri Buluta Aktar
+          </button>
+
+          <button
+            onClick={handleGlobalReset}
+            className="bg-red-900/50 hover:bg-red-800 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-bold transition-colors border border-red-800"
+          >
+            <Trash2 size={16} /> Sıfırla
+          </button>
+
+          <button
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold transition-colors"
+          >
+            <Save size={16} /> Kaydet
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors"
+          >
+            <LogOut size={16} /> Çıkış
+          </button>
+        </div>
+      </div>
+
+      {/* Control Bar */}
+      <div className="bg-slate-100 border-b border-slate-200">
+        <div className="p-3 flex gap-3 items-center justify-between border-b border-slate-200">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-md border border-slate-300 shadow-sm">
+            <span className="text-xs font-bold text-slate-500 uppercase">
+              Çalışılan Yıl:
+            </span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="bg-transparent font-bold text-slate-800 outline-none cursor-pointer"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddYear}
+              className="ml-2 p-1 bg-slate-200 hover:bg-blue-100 text-slate-600 hover:text-blue-600 rounded-full"
+              title="Sonraki Yılı Ekle"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          <button
+            onClick={clearTable}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-orange-50 text-orange-600 rounded border border-orange-200 text-xs font-bold transition-colors"
+          >
+            <RotateCcw size={14} />
+            Ekranı Temizle
+          </button>
+        </div>
+
+        {/* Metric Tabs */}
+        <div className="px-2 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+          {METRIC_TYPES.map((metric) => (
+            <button
+              key={metric.id}
+              onClick={() => setSelectedMetric(metric.id)}
+              className={`
+                        flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2
+                        ${
+                          selectedMetric === metric.id
+                            ? `bg-slate-800 text-white shadow-md transform scale-105`
+                            : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+                        }
+                    `}
+            >
+              <Layers size={14} />
+              {metric.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Excel Table */}
+      <div className="flex-1 overflow-auto bg-slate-50 select-none">
+        <table className="w-full border-collapse text-sm bg-white">
+          <thead className="bg-slate-200 sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th className="p-3 text-left font-bold text-slate-700 border-r border-slate-300 w-48 sticky left-0 bg-slate-200 z-20">
+                Birim Adı{" "}
+                <span className="font-normal text-slate-500 text-xs ml-1">
+                  ({UNITS.length})
+                </span>
+              </th>
+              {MONTH_INDICES.map((month) => (
+                <th
+                  key={month}
+                  className="p-2 w-24 text-center font-bold text-slate-700 border-r border-slate-300 bg-slate-100"
+                >
+                  {MONTH_NAMES[month]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {UNITS.map((unit, unitIndex) => {
+              const data = gridData[unit] || {};
+              return (
+                <tr
+                  key={unit}
+                  className="border-b border-slate-200 hover:bg-blue-50 transition-colors group"
+                >
+                  <td className="p-3 font-semibold text-slate-800 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-blue-50 select-text shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                    {unit}
+                  </td>
+                  {MONTH_INDICES.map((month, monthArrIndex) => {
+                    const isSelected = isCellSelected(unitIndex, monthArrIndex);
+                    return (
+                      <td
+                        key={month}
+                        className="p-0 border-r border-slate-100 relative"
+                      >
+                        <input
+                          id={`cell-${unitIndex}-${month}`}
+                          type="text"
+                          className={`w-full h-full p-2 text-center outline-none focus:z-10 relative transition-all text-slate-700 font-mono cursor-default
+                                                ${
+                                                  isSelected
+                                                    ? "bg-blue-200 ring-1 ring-blue-400"
+                                                    : "bg-transparent focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                                                }
+                                            `}
+                          placeholder="-"
+                          value={data[month] ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(unit, month, e.target.value)
+                          }
+                          onPaste={(e) =>
+                            handlePaste(e, unitIndex, monthArrIndex)
+                          }
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, unitIndex, monthArrIndex)
+                          }
+                          onFocus={(e) =>
+                            handleFocus(e, unitIndex, monthArrIndex)
+                          }
+                          onMouseDown={() =>
+                            handleMouseDown(unitIndex, monthArrIndex)
+                          }
+                          onMouseEnter={() =>
+                            handleMouseEnter(unitIndex, monthArrIndex)
+                          }
+                          autoComplete="off"
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 export default function App() {
+  const [view, setView] = useState("dashboard");
+  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allData, setAllData] = useState([]);
   const [user, setUser] = useState(null);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState(null);
-  const [rootWord, setRootWord] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [source, setSource] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Otomatik Giriş (Firebase Auth)
+  const [availableYears, setAvailableYears] = useState([2024, 2025, 2026]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+
+  const [isAdminOpen, setAdminOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [password, setPassword] = useState("");
+
+  // --- FIREBASE AUTH & LISTENER ---
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        // Anonim giriş yapmayı dener
-        await signInAnonymously(auth);
-      } catch (err) {
-        console.warn("Firebase Auth Hatası:", err);
-        // Hata olsa bile uygulamayı kilitleme, sadece logla.
-      }
+      // GitHub versiyonunda doğrudan anonim giriş veya sizin belirlediğiniz yöntem kullanılır
+      await signInAnonymously(auth);
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
 
-  // --- AI FONKSİYONU (GÜVENLİ VE TEMİZLENMİŞ) ---
-  const fetchFromAI = async (word) => {
-    // Anahtar kontrolü
-    if (!geminiApiKey || geminiApiKey.includes("BURAYA")) {
-      throw new Error(
-        "Lütfen kodun en üstündeki 'geminiApiKey' alanına yapay zeka anahtarını yapıştırın."
-      );
+  // --- FIREBASE DATA LISTENER ---
+  useEffect(() => {
+    if (!user) return;
+
+    // RULE 1: Use public data path
+    const dataCollection = collection(
+      db,
+      "artifacts",
+      appId,
+      "public",
+      "data",
+      "performance_records"
+    );
+
+    // Real-time listener
+    const unsubscribe = onSnapshot(
+      dataCollection,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setAllData(data);
+      },
+      (error) => {
+        console.error("Data fetch error:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const uniqueUnits = useMemo(() => UNITS, []);
+
+  const filteredUnits = uniqueUnits.filter((unit) =>
+    unit.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const currentData = useMemo(() => {
+    if (!selectedUnit) return null;
+    return allData.find(
+      (d) =>
+        d.unit === selectedUnit &&
+        d.year === parseInt(selectedYear) &&
+        d.month === parseInt(selectedMonth)
+    );
+  }, [allData, selectedUnit, selectedYear, selectedMonth]);
+
+  const handleUnitClick = (unit) => {
+    setSelectedUnit(unit);
+    const unitData = allData.filter((d) => d.unit === unit);
+    if (unitData.length > 0) {
+      const latestData = unitData.sort(
+        (a, b) => b.year - a.year || b.month - a.month
+      )[0];
+      if (latestData) {
+        setSelectedYear(latestData.year);
+        setSelectedMonth(latestData.month);
+      }
     }
+    setView("detail");
+    window.scrollTo(0, 0);
+  };
 
-    setAiLoading(true);
-    try {
-      const prompt = `
-        You are an English-Turkish dictionary API.
-        Word: "${word}"
-
-        Task:
-        1. Identify the ROOT form (e.g. "went" -> "go").
-        2. Provide definitions for the ROOT word.
-        
-        IMPORTANT:
-        - Provide ONLY raw JSON output.
-        - Do NOT use Markdown (no \`\`\`json tags).
-        
-        Output strict JSON format:
-        {
-          "root": "string (root word)",
-          "definitions": [
-            {
-              "type": "noun/verb/adj",
-              "meaning": "Turkish meaning",
-              "english_definition": "Simple English definition",
-              "example": "English example sentence",
-              "tags": ["tag1", "tag2"],
-              "v2": "past tense (if verb)",
-              "v3": "participle (if verb)",
-              "plural": "plural form (if noun)",
-              "comparative": "comp form (if adj)"
-            }
-          ]
-        }
-      `;
-
-      // GÜNCELLEME: Model ismi 'gemini-2.5-flash-preview-09-2025' olarak değiştirildi.
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: "application/json", // JSON zorlaması
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errDetail = await response.text();
-        console.error("API Error Details:", errDetail);
-        throw new Error(`API Hatası: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!aiText) throw new Error("AI boş yanıt döndürdü.");
-
-      // --- TEMİZLİK KISMI (HATA ÇÖZÜMÜ) ---
-      // Gelen yanıttaki ```json ve ``` işaretlerini siler
-      aiText = aiText
-        .replace(/```json/g, "")
-        .replace(/```/g, "")
-        .trim();
-
-      let parsedData;
-      try {
-        parsedData = JSON.parse(aiText);
-      } catch (e) {
-        console.error("JSON Parse Hatası. Gelen veri:", aiText);
-        throw new Error("AI geçersiz formatta yanıt verdi, tekrar deneyin.");
-      }
-
-      const definitions = parsedData.definitions || [];
-      const root = parsedData.root || word;
-
-      // Veritabanına Kaydet (Public Data)
-      if (user && definitions.length > 0) {
-        try {
-          const rootKey = root.toLowerCase().trim();
-          // Firestore yolunu senin proje ayarlarına uygun hale getirdik
-          const docRef = doc(
-            db,
-            "artifacts",
-            appId,
-            "public",
-            "data",
-            "dictionary_" + rootKey
-          );
-          await setDoc(docRef, {
-            definitions: definitions,
-            root: root,
-            createdAt: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn(
-            "DB Kayıt uyarısı (Önemli değil, izinleri kontrol et):",
-            e
-          );
-        }
-      }
-
-      return { definitions, root };
-    } catch (err) {
-      console.error("AI Error Full:", err);
-      throw err;
-    } finally {
-      setAiLoading(false);
+  const handleLogin = () => {
+    if (password === "admin123") {
+      setShowLoginModal(false);
+      setAdminOpen(true);
+      setPassword("");
+    } else {
+      alert("Hatalı şifre!");
     }
   };
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setResults(null);
-    setRootWord(null);
-    setSource(null);
-
-    const lowerQuery = query.toLowerCase().trim();
-    let searchKey = lowerQuery;
-    let detectedRoot = null;
-
-    // 1. Manuel Liste Kontrolü
-    if (wordMappings[lowerQuery]) {
-      searchKey = wordMappings[lowerQuery];
-      detectedRoot = searchKey;
-    }
-
+  const handleSaveBatch = async (recordsToSave) => {
+    if (!user) return;
+    setIsSaving(true);
     try {
-      // 2. Veritabanı Kontrolü
-      let docSnap = null;
-      try {
+      const promises = recordsToSave.map((record) => {
+        const cleanRecord = JSON.parse(JSON.stringify(record));
         const docRef = doc(
           db,
           "artifacts",
           appId,
           "public",
           "data",
-          "dictionary_" + searchKey
+          "performance_records",
+          record.id
         );
-        docSnap = await getDoc(docRef);
-      } catch (dbErr) {
-        console.log("DB okuma atlandı:", dbErr);
-      }
+        return setDoc(docRef, cleanRecord, { merge: true });
+      });
 
-      if (docSnap && docSnap.exists()) {
-        const data = docSnap.data();
-        setResults(data.definitions);
-        setSource("db");
-        if (!detectedRoot && data.root && data.root !== lowerQuery) {
-          setRootWord(data.root);
-        } else if (detectedRoot) {
-          setRootWord(detectedRoot);
-        }
-      } else {
-        // 3. Yapay Zeka (Gemini) Çağrısı
-        const aiResult = await fetchFromAI(searchKey);
-        setResults(aiResult.definitions);
-        setSource("ai");
-        if (aiResult.root && aiResult.root.toLowerCase() !== lowerQuery) {
-          setRootWord(aiResult.root.toLowerCase());
-        }
-      }
-    } catch (err) {
-      setError(err.message || "Beklenmedik bir hata oluştu.");
+      await Promise.all(promises);
+    } catch (error) {
+      console.error("Save error:", error);
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const clearSearch = () => {
-    setQuery("");
-    setResults(null);
-    setRootWord(null);
-    setSource(null);
+  // --- MIGRATION TOOL (LOCAL -> CLOUD) ---
+  const handleImportLocal = () => {
+    if (!user) return;
+    if (
+      !window.confirm(
+        "Tarayıcınızdaki eski (Local Storage) veriler Buluta yüklenecek. Onaylıyor musunuz?"
+      )
+    )
+      return;
+
+    const localDataStr = localStorage.getItem("performanceData");
+    if (!localDataStr) {
+      alert("Eski veri bulunamadı!");
+      return;
+    }
+
+    try {
+      const localData = JSON.parse(localDataStr);
+      if (Array.isArray(localData) && localData.length > 0) {
+        handleSaveBatch(localData);
+        alert(
+          `${localData.length} adet eski kayıt başarıyla buluta aktarılıyor...`
+        );
+      } else {
+        alert("Eski veri boş veya geçersiz.");
+      }
+    } catch (e) {
+      alert("Hata: " + e.message);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-gray-800 flex flex-col">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between max-w-3xl">
-          <div className="flex items-center gap-2 text-indigo-600">
-            <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
-              <Book className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900">
-              AI Sözlük
+  const handleResetAll = () => {
+    // Reset logic handled mostly manually due to restrictions
+    alert(
+      "Güvenlik sebebiyle toplu silme işlemi devre dışı. Lütfen hücreleri seçip 'Delete' tuşu ile siliniz."
+    );
+  };
+
+  // --- Render Fonksiyonları ---
+
+  const renderDashboard = () => (
+    <div className="pb-24">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 border-b border-slate-100 px-4 py-3 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              Birimler
             </h1>
-          </div>
-          <div className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
-            <Cpu size={12} /> v3.2 (Fixed)
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-6 max-w-3xl w-full">
-        {/* Anahtar Uyarısı (Eğer Gemini Key Girilmemişse Görünür) */}
-        {geminiApiKey.includes("BURAYA") && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-yellow-800 text-sm flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p>
-              <strong>Dikkat:</strong> Veritabanı bağlantısı tamam ancak{" "}
-              <b>Gemini API Anahtarı</b> eksik. Lütfen kodun 30. satırına API
-              anahtarını yapıştırın.
-            </p>
-          </div>
-        )}
-
-        {/* Search Section */}
-        <div className="relative mb-8 group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
-          <form onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="Kelime ara (örn: running, book)..."
-              className="w-full pl-12 pr-12 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder-gray-400 appearance-none"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="absolute right-14 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-400">
+                {filteredUnits.length} sonuç listelendi
+              </p>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  user
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
               >
-                <X size={18} />
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={!query.trim() || loading}
-              className="absolute right-2 top-2 bottom-2 bg-indigo-600 text-white rounded-xl px-4 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
-              ) : (
-                "Ara"
-              )}
-            </button>
-          </form>
+                {user ? <Wifi size={10} /> : <WifiOff size={10} />}{" "}
+                {user ? "Online" : "Bağlanıyor..."}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowLoginModal(true)}
+            className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2 shadow-lg shadow-slate-300"
+          >
+            <Lock size={16} />
+            <span className="text-xs font-bold hidden sm:inline">
+              Admin Girişi
+            </span>
+          </button>
         </div>
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+            size={18}
+          />
+          <input
+            type="text"
+            placeholder="Hızlı ara..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-        {/* Örnekler */}
-        {!results && !loading && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-              Örnek Aramalar
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {["serendipity", "obfuscate", "running", "better"].map((w) => (
-                <button
-                  key={w}
-                  onClick={() => setQuery(w)}
-                  className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-sm font-medium hover:bg-gray-50 hover:border-indigo-200 hover:text-indigo-600 transition-all active:scale-95"
-                >
-                  {w}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Yükleniyor */}
-        {aiLoading && (
-          <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 animate-fade-in">
-            <div className="relative">
-              <div className="w-12 h-12 border-4 border-indigo-100 rounded-full animate-spin border-t-indigo-600"></div>
-              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600 w-5 h-5" />
-            </div>
-            <p className="text-gray-500 font-medium animate-pulse">
-              Yapay zeka anlamını çözüyor...
-            </p>
-          </div>
-        )}
-
-        {/* Hata */}
-        {!loading && error && (
-          <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3 animate-slide-up">
-            <AlertCircle className="text-red-500 w-6 h-6 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-bold text-red-800 text-sm">Hata Oluştu</h3>
-              <p className="text-red-600 text-sm mt-1">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Sonuçlar */}
-        {!loading && results && (
-          <div className="space-y-6 animate-slide-up">
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md ${
-                    source === "ai"
-                      ? "bg-purple-100 text-purple-700"
-                      : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {source === "ai" ? (
-                    <Sparkles size={12} />
-                  ) : (
-                    <Database size={12} />
-                  )}
-                  {source === "ai" ? "AI Üretti" : "Veritabanı"}
-                </div>
-                {rootWord && (
-                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <span className="text-gray-400 line-through decoration-red-400 decoration-2">
-                      {query}
-                    </span>
-                    <span>→</span>
-                    <span className="font-bold text-gray-800 bg-yellow-100 px-1 rounded">
-                      {rootWord}
-                    </span>
-                  </div>
-                )}
+      {/* Unit List */}
+      <div className="px-4 mt-2">
+        {filteredUnits.map((unit, index) => (
+          <div
+            key={index}
+            onClick={() => handleUnitClick(unit)}
+            className="group flex items-center justify-between p-4 mb-2 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-blue-200 shadow-md">
+                {unit.charAt(0)}
+              </div>
+              <div>
+                <span className="font-semibold text-slate-800 block">
+                  {unit}
+                </span>
+                <span className="text-xs text-slate-400">
+                  Detayları görüntüle
+                </span>
               </div>
             </div>
-            {results.map((item, index) => (
-              <DefinitionCard key={index} item={item} index={index + 1} />
-            ))}
+            <ChevronRight
+              className="text-slate-300 group-hover:text-blue-500 transition-colors"
+              size={20}
+            />
           </div>
-        )}
-      </main>
+        ))}
+      </div>
     </div>
   );
-}
 
-function DefinitionCard({ item, index }) {
-  const typeColors = {
-    verb: "bg-green-50/50 border-green-200 text-green-800",
-    noun: "bg-blue-50/50 border-blue-200 text-blue-800",
-    adjective: "bg-purple-50/50 border-purple-200 text-purple-800",
-    default: "bg-gray-50/50 border-gray-200 text-gray-800",
+  const renderDetail = () => {
+    const isTeslimBasarisiz =
+      currentData && parseFloat(currentData.teslimPerformansi) < 94;
+
+    return (
+      <div className="pb-24 bg-slate-50 min-h-screen">
+        <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <button
+              onClick={() => setView("dashboard")}
+              className="p-2 -ml-2 hover:bg-slate-100 rounded-full"
+            >
+              <ArrowLeft size={22} className="text-slate-600" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-slate-800 leading-tight">
+                {selectedUnit}
+              </h1>
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <Calendar size={10} />
+                <span>{selectedYear} Dönemi</span>
+              </div>
+            </div>
+          </div>
+          <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-slate-100 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg border-none focus:ring-0 shrink-0"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
+            {MONTH_NAMES.map((m, i) => {
+              if (i === 0) return null;
+              const isSelected = i === selectedMonth;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelectedMonth(i)}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${
+                    isSelected
+                      ? "bg-slate-800 text-white shadow-md"
+                      : "bg-white border border-slate-200 text-slate-500"
+                  }`}
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {currentData ? (
+            <>
+              <div
+                className={`rounded-2xl p-5 text-white shadow-lg mb-2 relative overflow-hidden ${
+                  isTeslimBasarisiz
+                    ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
+                    : "bg-gradient-to-br from-indigo-600 to-blue-700 shadow-indigo-200"
+                }`}
+              >
+                <div className="relative z-10">
+                  <p
+                    className={`text-xs font-medium uppercase tracking-wider opacity-80 ${
+                      isTeslimBasarisiz ? "text-red-100" : "text-indigo-100"
+                    }`}
+                  >
+                    Teslim Performansı
+                  </p>
+                  <div className="flex items-end gap-2 mt-1">
+                    <h2 className="text-4xl font-bold">
+                      {formatNumber(currentData.teslimPerformansi)}%
+                    </h2>
+                    <p
+                      className={`mb-1.5 text-sm ${
+                        isTeslimBasarisiz ? "text-red-100" : "text-indigo-200"
+                      }`}
+                    >
+                      Hedef: %94
+                    </p>
+                  </div>
+                </div>
+                <div className="absolute -right-4 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
+                  Operasyonel Kalite
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <KPICard
+                    title="Rota"
+                    value={currentData.rotaOrani}
+                    suffix="%"
+                    color={currentData.rotaOrani <= 80 ? "red" : "emerald"}
+                    icon={TrendingUp}
+                  />
+                  <KPICard
+                    title="TVS"
+                    value={currentData.tvsOrani}
+                    suffix="%"
+                    color={currentData.tvsOrani <= 90 ? "red" : "emerald"}
+                    icon={Activity}
+                  />
+                  <KPICard
+                    title="Check-in"
+                    value={currentData.checkInOrani}
+                    suffix="%"
+                    color={currentData.checkInOrani <= 90 ? "red" : "emerald"}
+                    icon={CheckCircle2}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
+                  Dijitalleşme
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <KPICard
+                    title="SMS"
+                    value={currentData.smsOrani}
+                    suffix="%"
+                    color={currentData.smsOrani <= 50 ? "red" : "blue"}
+                    icon={Smartphone}
+                  />
+                  <KPICard
+                    title="E-ATF"
+                    value={currentData.eAtfOrani}
+                    suffix="%"
+                    color={currentData.eAtfOrani <= 80 ? "red" : "blue"}
+                    icon={FileText}
+                  />
+                  <KPICard
+                    title="Elk. İhbar"
+                    value={currentData.elektronikIhbar}
+                    suffix="%"
+                    color={currentData.elektronikIhbar <= 90 ? "red" : "blue"}
+                    icon={Mail}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
+                  Hacim Bilgisi
+                </h3>
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
+                  <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
+                    <Truck size={20} className="text-slate-300 mb-1" />
+                    <p className="text-xs text-slate-400 mb-1">Gelen Kargo</p>
+                    <p className="text-xl font-bold text-slate-800">
+                      {currentData.gelenKargo}
+                    </p>
+                  </div>
+                  <div className="flex-1 text-center flex flex-col items-center">
+                    <Box size={20} className="text-slate-300 mb-1" />
+                    <p className="text-xs text-slate-400 mb-1">Giden Kargo</p>
+                    <p className="text-xl font-bold text-slate-800">
+                      {currentData.gidenKargo}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <Box size={48} className="mb-4 opacity-20" />
+              <p className="text-sm">Bu tarih için veri bulunamadı.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
-  const badgeColors = {
-    verb: "bg-green-100 text-green-700",
-    noun: "bg-blue-100 text-blue-700",
-    adjective: "bg-purple-100 text-purple-700",
-    default: "bg-gray-100 text-gray-700",
-  };
-  const style = typeColors[item.type] || typeColors.default;
-  const badgeStyle = badgeColors[item.type] || badgeColors.default;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
-      <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-start">
-        <div className="flex gap-3 items-center">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-bold font-mono">
-            {index}
-          </span>
-          <span
-            className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${badgeStyle}`}
-          >
-            {item.type}
-          </span>
-        </div>
-        <div className="flex gap-1">
-          {item.tags?.slice(0, 2).map((tag, i) => (
-            <span
-              key={i}
-              className="text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="space-y-3 mb-6">
-          <h3 className="text-2xl font-bold text-gray-900 leading-tight">
-            {item.meaning}
-          </h3>
-          {item.english_definition && (
-            <div className="flex gap-3 items-start">
-              <Globe className="w-4 h-4 text-indigo-400 mt-1 flex-shrink-0" />
-              <p className="text-gray-600 italic leading-relaxed text-sm md:text-base font-serif">
-                {item.english_definition}
-              </p>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 safe-area-pb">
+      {/* Admin Modal */}
+      {isAdminOpen && (
+        <AdminPanel
+          allData={allData}
+          onSaveBatch={handleSaveBatch}
+          onClose={() => setAdminOpen(false)}
+          onResetAll={handleResetAll}
+          onImportLocal={handleImportLocal}
+          availableYears={availableYears}
+          setAvailableYears={setAvailableYears}
+          userId={user?.uid}
+          isSaving={isSaving}
+        />
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Lock className="text-slate-800" /> Yönetici Girişi
+            </h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Lütfen giriş şifresini giriniz. (Şifre: admin123)
+            </p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Şifre"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleLogin}
+                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+              >
+                Giriş Yap
+              </button>
             </div>
-          )}
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-3">
-          {(item.v2 || item.plural || item.comparative) && (
-            <div className={`p-3 rounded-xl text-sm border ${style}`}>
-              <div className="flex items-center gap-2 mb-2 font-semibold opacity-80">
-                <Layers size={14} />
-                {item.type === "verb"
-                  ? "Çekimler"
-                  : item.type === "noun"
-                  ? "Haller"
-                  : "Dereceler"}
-              </div>
-              <div className="grid grid-cols-2 gap-y-1 gap-x-4">
-                {item.v2 && (
-                  <div className="flex justify-between">
-                    <span>Past:</span> <b>{item.v2}</b>
-                  </div>
-                )}
-                {item.v3 && (
-                  <div className="flex justify-between">
-                    <span>Participle:</span> <b>{item.v3}</b>
-                  </div>
-                )}
-                {item.plural && (
-                  <div className="flex justify-between">
-                    <span>Plural:</span> <b>{item.plural}</b>
-                  </div>
-                )}
-                {item.comparative && (
-                  <div className="flex justify-between">
-                    <span>Comp:</span> <b>{item.comparative}</b>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {item.example && (
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-2 mb-1 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <MessageSquare size={12} /> Örnek
-              </div>
-              <p className="text-slate-700 text-sm font-medium">
-                "{item.example}"
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
+
+      {view === "dashboard" ? renderDashboard() : renderDetail()}
     </div>
   );
 }
