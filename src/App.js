@@ -106,7 +106,6 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
   const [selection, setSelection] = useState({ start: null, end: null, isDragging: false });
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  // Veriyi Hazırla
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -117,10 +116,9 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
       });
     });
     setGridData(newGrid);
-    setPendingChanges(false); // Yıl veya metrik değişince pending state'i sıfırla
+    setPendingChanges(false);
   }, [selectedYear, selectedMetric, allData]);
 
-  // Global mouse up
   useEffect(() => {
     const handleWindowMouseUp = () => { if (selection.isDragging) setSelection((prev) => ({ ...prev, isDragging: false })); };
     window.addEventListener("mouseup", handleWindowMouseUp);
@@ -129,7 +127,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
 
   const handleInputChange = (unit, month, value) => {
     setGridData((prev) => ({ ...prev, [unit]: { ...prev[unit], [month]: value } }));
-    setPendingChanges(true); // Değişiklik olduğunu işaretle
+    setPendingChanges(true);
   };
   
   const handleMouseDown = (r, c) => { setSelection({ start: { r, c }, end: { r, c }, isDragging: true }); };
@@ -220,7 +218,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
           });
         });
         onSaveBatch(updatedData);
-        setPendingChanges(false); // Kayıt başarılı olunca pendingChanges kapat
+        setPendingChanges(false);
         alert("Veriler Başarıyla Kaydedildi!");
     };
 
@@ -234,7 +232,6 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
                  {pendingChanges && <span className="text-xs bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">Kaydedilmemiş Değişiklikler Var</span>}
              </div>
          </div>
-         {/* SADECE KAYDET VE ÇIKIŞ BUTONLARI */}
          <div className="flex flex-wrap gap-2 items-center">
             <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors flex items-center gap-2">
                 {isSaving ? <RefreshCw className="animate-spin" size={16}/> : <Save size={16}/>} 
@@ -454,21 +451,21 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
                 <Lock size={32} className="text-slate-600 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Admin Veri Girişi</h3>
-              <p className="text-sm text-slate-500">Aylık performans verilerinin girişi.</p>
+              <p className="text-sm text-slate-500">Aylık performans verilerini Excel formatında girmek için.</p>
            </div>
            <div onClick={() => onNavigate('dashboard')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
                 <Activity size={32} className="text-blue-600 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birimler</h3>
-              <p className="text-sm text-slate-500">Birimlerin performans verilerini görmek için.</p>
+              <p className="text-sm text-slate-500">Birimlerin performans verilerini ve KPI detaylarını görüntüle.</p>
            </div>
            <div onClick={() => onNavigate('notes')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors">
                 <FileText size={32} className="text-orange-500 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birim Notları</h3>
-              <p className="text-sm text-slate-500">Birimlerle ilgili notlar ekle ve yönet.</p>
+              <p className="text-sm text-slate-500">Birimlerle ilgili operasyonel notlar ekle ve yönet.</p>
            </div>
         </div>
       </div>
@@ -598,7 +595,7 @@ export default function App() {
   };
 
   const handleLoginForAdmin = () => {
-    if (password === "Marvel3535") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
+    if (password === "admin123") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
     else { alert("Hatalı şifre!"); }
   };
 
@@ -623,7 +620,8 @@ export default function App() {
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-          <input type="text" placeholder="Hızlı ara..." className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <input type="text" placeholder="Hızlı ara..." className="w-full pl-10 pr-10 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors"><X size={16} /></button>}
         </div>
       </div>
       <div className="px-4 mt-2">
@@ -661,9 +659,9 @@ export default function App() {
                     <div className={`rounded-2xl p-5 text-white shadow-lg mb-2 relative overflow-hidden ${isTeslimBasarisiz ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200" : "bg-gradient-to-br from-indigo-600 to-blue-700 shadow-indigo-200"}`}>
                         <div className="relative z-10"><p className={`text-xs font-medium uppercase tracking-wider opacity-80 ${isTeslimBasarisiz ? "text-red-100" : "text-indigo-100"}`}>Teslim Performansı</p><div className="flex items-end gap-2 mt-1"><h2 className="text-4xl font-bold">{formatNumber(currentData.teslimPerformansi)}%</h2><p className={`mb-1.5 text-sm ${isTeslimBasarisiz ? "text-red-100" : "text-indigo-200"}`}>Hedef: %94</p></div></div>
                     </div>
-                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Rotalama Verileri</h3><div className="grid grid-cols-3 gap-2"><KPICard title="Rota" value={currentData.rotaOrani} suffix="%" color={currentData.rotaOrani <= 80 ? "red" : "emerald"} icon={TrendingUp} /><KPICard title="TVS" value={currentData.tvsOrani} suffix="%" color={currentData.tvsOrani <= 90 ? "red" : "emerald"} icon={Activity} /><KPICard title="Check-in" value={currentData.checkInOrani} suffix="%" color={currentData.checkInOrani <= 90 ? "red" : "emerald"} icon={CheckCircle2} /></div></div>
-                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Operasyonel Veriler</h3><div className="grid grid-cols-3 gap-2"><KPICard title="SMS" value={currentData.smsOrani} suffix="%" color={currentData.smsOrani <= 50 ? "red" : "blue"} icon={Smartphone} /><KPICard title="E-ATF" value={currentData.eAtfOrani} suffix="%" color={currentData.eAtfOrani <= 80 ? "red" : "blue"} icon={FileText} /><KPICard title="E-İhbar" value={currentData.elektronikIhbar} suffix="%" color={currentData.elektronikIhbar <= 90 ? "red" : "blue"} icon={Mail} /></div></div>
-                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Gelen-Giden Belge Sayıları</h3><div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4"><div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center"><Truck size={20} className="text-slate-300 mb-1" /><p className="text-xs text-slate-400 mb-1">Gelen</p><p className="text-xl font-bold text-slate-800">{currentData.gelenKargo}</p></div><div className="flex-1 text-center flex flex-col items-center"><Box size={20} className="text-slate-300 mb-1" /><p className="text-xs text-slate-400 mb-1">Giden</p><p className="text-xl font-bold text-slate-800">{currentData.gidenKargo}</p></div></div></div>
+                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Operasyonel</h3><div className="grid grid-cols-3 gap-2"><KPICard title="Rota" value={currentData.rotaOrani} suffix="%" color={currentData.rotaOrani <= 80 ? "red" : "emerald"} icon={TrendingUp} /><KPICard title="TVS" value={currentData.tvsOrani} suffix="%" color={currentData.tvsOrani <= 90 ? "red" : "emerald"} icon={Activity} /><KPICard title="Check-in" value={currentData.checkInOrani} suffix="%" color={currentData.checkInOrani <= 90 ? "red" : "emerald"} icon={CheckCircle2} /></div></div>
+                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Dijital</h3><div className="grid grid-cols-3 gap-2"><KPICard title="SMS" value={currentData.smsOrani} suffix="%" color={currentData.smsOrani <= 50 ? "red" : "blue"} icon={Smartphone} /><KPICard title="E-ATF" value={currentData.eAtfOrani} suffix="%" color={currentData.eAtfOrani <= 80 ? "red" : "blue"} icon={FileText} /><KPICard title="E-İhbar" value={currentData.elektronikIhbar} suffix="%" color={currentData.elektronikIhbar <= 90 ? "red" : "blue"} icon={Mail} /></div></div>
+                    <div><h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Hacim</h3><div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4"><div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center"><Truck size={20} className="text-slate-300 mb-1" /><p className="text-xs text-slate-400 mb-1">Gelen</p><p className="text-xl font-bold text-slate-800">{currentData.gelenKargo}</p></div><div className="flex-1 text-center flex flex-col items-center"><Box size={20} className="text-slate-300 mb-1" /><p className="text-xs text-slate-400 mb-1">Giden</p><p className="text-xl font-bold text-slate-800">{currentData.gidenKargo}</p></div></div></div>
                   </>
                ) : (
                  <div className="flex flex-col items-center justify-center py-20 text-slate-400"><Box size={48} className="mb-4 opacity-20" /><p className="text-sm">Veri yok.</p></div>
@@ -682,7 +680,7 @@ export default function App() {
       {view === 'dashboard' && renderDashboard()}
       {view === 'detail' && renderDetail()}
       {view === 'notes' && <NotesPage user={user} onClose={() => setView('menu')} />}
-      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
+      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
       {isProfileOpen && <UserProfileModal user={user} onClose={() => setProfileOpen(false)} />}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
