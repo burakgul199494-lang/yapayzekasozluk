@@ -620,7 +620,7 @@ export default function App() {
   };
 
   const handleLoginForAdmin = () => {
-    if (password === "admin123") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
+    if (password === "Marvel3535") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
     else { alert("Hatalı şifre!"); }
   };
 
