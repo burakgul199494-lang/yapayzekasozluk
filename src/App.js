@@ -97,8 +97,8 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
   </div>
 );
 
-// --- ADMIN PANEL (SADELEŞTİRİLMİŞ) ---
-const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailableYears, isSaving }) => {
+// --- ADMIN PANEL (GÜNCELLENMİŞ VE GÜVENLİ) ---
+const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailableYears, isSaving, isLoadingData }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMetric, setSelectedMetric] = useState("teslimPerformansi");
   const [gridData, setGridData] = useState({});
@@ -118,7 +118,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
     });
     setGridData(newGrid);
     setPendingChanges(false);
-  }, [selectedYear, selectedMetric, allData]);
+  }, [selectedYear, selectedMetric, allData]); // allData değiştiğinde grid güncellenir
 
   // Global mouse up
   useEffect(() => {
@@ -134,6 +134,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
   
   const handleMouseDown = (r, c) => { setSelection({ start: { r, c }, end: { r, c }, isDragging: true }); };
   const handleMouseEnter = (r, c) => { if (selection.isDragging) setSelection((prev) => ({ ...prev, end: { r, c } })); };
+  
   const isCellSelected = (r, c) => {
     if (!selection.start || !selection.end) return false;
     const minR = Math.min(selection.start.r, selection.end.r); const maxR = Math.max(selection.start.r, selection.end.r);
@@ -203,26 +204,51 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
     const handleAddYear = () => { const nextYear = availableYears[availableYears.length - 1] + 1; setAvailableYears([...availableYears, nextYear]); setSelectedYear(nextYear); };
     const clearTable = () => { if (window.confirm(`DİKKAT: ${selectedYear} yılı temizlenecek.`)) { const newGrid = {}; UNITS.forEach((unit) => { newGrid[unit] = { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "", 10: "", 11: "", 12: "" }; }); setGridData(newGrid); setPendingChanges(true); } };
     
+    // --- DÜZELTİLMİŞ VE GÜVENLİ SAVE FONKSİYONU ---
     const handleSave = () => {
-        let updatedData = [...allData];
+        let recordsToUpdate = [];
+    
         UNITS.forEach((unit) => {
           MONTH_INDICES.forEach((month) => {
             const value = gridData[unit][month];
             const cleanValueStr = String(value).trim().replace(",", ".");
-            const numValue = cleanValueStr === "" || cleanValueStr === "undefined" ? null : parseFloat(cleanValueStr);
-            const existingIndex = updatedData.findIndex((d) => d.unit === unit && d.year === parseInt(selectedYear) && d.month === month);
-            const finalValue = numValue === null ? null : selectedMetric.includes("Kargo") ? parseInt(cleanValueStr) : numValue;
-            if (existingIndex >= 0) { updatedData[existingIndex] = { ...updatedData[existingIndex], [selectedMetric]: finalValue }; } 
-            else if (numValue !== null) {
-              const newRecord = { id: `${unit}-${selectedYear}-${month}`, unit: unit, year: parseInt(selectedYear), month: month, teslimPerformansi: "", rotaOrani: "", tvsOrani: "", checkInOrani: "", smsOrani: "", eAtfOrani: "", elektronikIhbar: "", gelenKargo: "", gidenKargo: "", [selectedMetric]: finalValue, };
-              updatedData.push(newRecord);
+            
+            let finalValue = null;
+            if (cleanValueStr !== "" && cleanValueStr !== "undefined") {
+               finalValue = selectedMetric.includes("Kargo") ? parseInt(cleanValueStr) : parseFloat(cleanValueStr);
             }
+    
+            // Belge ID'si
+            const docId = `${unit}-${selectedYear}-${month}`;
+    
+            // Merge: true ile gönderileceği için sadece değişen metrik yeterli
+            const record = {
+              id: docId,
+              unit: unit,
+              year: parseInt(selectedYear),
+              month: month,
+              [selectedMetric]: finalValue
+            };
+    
+            recordsToUpdate.push(record);
           });
         });
-        onSaveBatch(updatedData);
+    
+        onSaveBatch(recordsToUpdate);
         setPendingChanges(false);
         alert("Veriler Başarıyla Kaydedildi!");
     };
+
+  // --- YÜKLEME EKRANI KONTROLÜ ---
+  if (isLoadingData) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <RefreshCw className="animate-spin text-blue-600 mb-4" size={48} />
+        <p className="text-slate-600 font-bold">Veriler Yükleniyor...</p>
+        <p className="text-slate-400 text-xs mt-2">Lütfen bekleyin, liste oluşturuluyor.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
@@ -330,7 +356,7 @@ const NotesPage = ({ user, onClose }) => {
           <h2 className="text-sm font-bold text-slate-700 uppercase mb-4 flex items-center gap-2">
             <FilePlus size={16} /> Yeni Not Ekle
           </h2>
-          
+           
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">Birim Seçiniz</label>
@@ -549,6 +575,8 @@ export default function App() {
   const [loginError, setLoginError] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true); // YENİ: Veri yükleme state'i
+
   const [availableYears, setAvailableYears] = useState([2024, 2025, 2026]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -558,7 +586,7 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
 
-  // MOBIL ZOOM FIX (2. Adım olarak eklediğimiz kod bloğu)
+  // MOBIL ZOOM FIX 
   useEffect(() => {
     const meta = document.querySelector('meta[name="viewport"]');
     if (meta) {
@@ -590,9 +618,17 @@ export default function App() {
   };
   const handleAppLogout = async () => { if(window.confirm("Çıkış?")) { await signOut(auth); setView("menu"); } };
 
+  // VERİ ÇEKME - YÜKLEME KONTROLÜ EKLENDİ
   useEffect(() => {
-    if (!user) { setAllData([]); return; }
-    const unsubscribe = onSnapshot(collection(db, "artifacts", appId, "public", "data", "performance_records"), (snap) => setAllData(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    if (!user) { 
+      setAllData([]); 
+      return; 
+    }
+    setDataLoading(true);
+    const unsubscribe = onSnapshot(collection(db, "artifacts", appId, "public", "data", "performance_records"), (snap) => {
+        setAllData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setDataLoading(false); // Veri geldi
+    });
     return () => unsubscribe();
   }, [user]);
 
@@ -603,14 +639,29 @@ export default function App() {
     return allData.find(d => d.unit === selectedUnit && d.year === parseInt(selectedYear) && d.month === parseInt(selectedMonth));
   }, [allData, selectedUnit, selectedYear, selectedMonth]);
 
+  // --- DÜZELTİLMİŞ UNIT CLICK (BOŞ AY ATLAYAN VERSİYON) ---
   const handleUnitClick = (unit) => {
     setSelectedUnit(unit);
     const unitData = allData.filter((d) => d.unit === unit);
+    
     if (unitData.length > 0) {
-      const latestData = unitData.sort((a, b) => b.year - a.year || b.month - a.month)[0];
-      if (latestData) { setSelectedYear(latestData.year); setSelectedMonth(latestData.month); }
+      // 1. Önce tüm veriyi tarihe göre (Yeniden eskiye) sırala
+      const sortedData = unitData.sort((a, b) => b.year - a.year || b.month - a.month);
+
+      // 2. İçinde 'teslimPerformansi' verisi (veya kritik veri) DOLU olan en güncel kaydı bul
+      // Not: BÖLGE Kasım ayı oluştu ama içi boşsa onu atlayıp Ekim'e gidecek.
+      const latestFilledData = sortedData.find(d => d.teslimPerformansi !== null && d.teslimPerformansi !== "" && d.teslimPerformansi !== undefined);
+
+      // 3. Eğer dolu bir kayıt bulursan onu seç, bulamazsan (hepsi boşsa) en son tarihli olanı seç.
+      const targetData = latestFilledData || sortedData[0];
+
+      if (targetData) { 
+        setSelectedYear(targetData.year); 
+        setSelectedMonth(targetData.month); 
+      }
     }
-    setView("detail"); window.scrollTo(0, 0);
+    setView("detail"); 
+    window.scrollTo(0, 0);
   };
 
   const handleNavigateFromMenu = (target) => {
@@ -627,6 +678,7 @@ export default function App() {
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
+        // Merge: true ile güncelleme yapıldığı için var olan diğer metrikler silinmez.
         const promises = records.map(r => setDoc(doc(db, "artifacts", appId, "public", "data", "performance_records", r.id), JSON.parse(JSON.stringify(r)), { merge: true }));
         await Promise.all(promises);
     } catch(e){console.error(e)} finally{setIsSaving(false)}
@@ -680,7 +732,7 @@ export default function App() {
                 <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-slate-100 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg border-none focus:ring-0 shrink-0">{availableYears.map((y) => <option key={y} value={y}>{y}</option>)}</select>
                 <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
                 {MONTH_NAMES.map((m, i) => { if (i === 0) return null; return (<button key={i} onClick={() => setSelectedMonth(i)} className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${i === selectedMonth ? "bg-slate-800 text-white shadow-md" : "bg-white border border-slate-200 text-slate-500"}`}>{m}</button>); })}
-            </div>
+             </div>
            </div>
            <div className="p-4 space-y-4">
                {currentData ? (
@@ -709,8 +761,23 @@ export default function App() {
       {view === 'dashboard' && renderDashboard()}
       {view === 'detail' && renderDetail()}
       {view === 'notes' && <NotesPage user={user} onClose={() => setView('menu')} />}
-      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} onImportLocal={handleImportLocal} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
+      
+      {isAdminOpen && (
+        <AdminPanel 
+            allData={allData} 
+            onSaveBatch={handleSaveBatch} 
+            onClose={() => { setAdminOpen(false); setView('menu'); }} 
+            onResetAll={handleResetAll} 
+            onImportLocal={handleImportLocal} 
+            availableYears={availableYears} 
+            setAvailableYears={setAvailableYears} 
+            isSaving={isSaving}
+            isLoadingData={dataLoading} // YENİ PROP
+        />
+      )}
+      
       {isProfileOpen && <UserProfileModal user={user} onClose={() => setProfileOpen(false)} />}
+      
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
