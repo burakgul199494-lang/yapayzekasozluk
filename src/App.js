@@ -1,9 +1,11 @@
+"use client";
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Search, ArrowLeft, Calendar, Upload, AlertCircle, ChevronRight, TrendingUp,
+  Search, ArrowLeft, Calendar, AlertCircle, ChevronRight, TrendingUp,
   Box, Activity, CheckCircle2, Truck, Smartphone, Mail, FileText, Lock, Save,
   LogOut, Grid, Plus, Trash2, RotateCcw, Layers, Download, UploadCloud,
-  Wifi, WifiOff, RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
+  RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
 } from "lucide-react";
 
 // --- FIREBASE IMPORTS ---
@@ -21,8 +23,8 @@ import {
   collection,
   doc,
   setDoc,
-  addDoc, // Not eklemek için
-  deleteDoc, // Not silmek için
+  addDoc,
+  deleteDoc,
   onSnapshot,
   query,
   orderBy,
@@ -55,7 +57,6 @@ const formatNumber = (num) => {
 
 const formatDate = (timestamp) => {
   if (!timestamp) return "";
-  // Firebase timestamp kontrolü
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return date.toLocaleDateString("tr-TR") + " " + date.toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' });
 };
@@ -100,9 +101,6 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
 
 // --- ADMIN PANEL (EXCEL GİRİŞİ) ---
 const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears, setAvailableYears, onImportLocal, isSaving }) => {
-  // (Admin panel kodlarında değişiklik yok, sadece render edildiği yer değişti)
-  // Yerden tasarruf için özet geçiyorum, eski kodun aynısı.
-  // ... State tanımları ...
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMetric, setSelectedMetric] = useState("teslimPerformansi");
   const [gridData, setGridData] = useState({});
@@ -141,7 +139,6 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
     setPendingChanges(true);
   };
   
-  // Mouse & Keyboard Handlers (Aynı)
   const handleMouseDown = (r, c) => { setSelection({ start: { r, c }, end: { r, c }, isDragging: true }); };
   const handleMouseEnter = (r, c) => { if (selection.isDragging) setSelection((prev) => ({ ...prev, end: { r, c } })); };
   const isCellSelected = (r, c) => {
@@ -251,7 +248,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
           <div className="p-3 flex gap-3 items-center justify-between border-b border-slate-200">
              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-md border border-slate-300 shadow-sm">
                 <span className="text-xs font-bold text-slate-500 uppercase">Yıl:</span>
-                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-transparent font-bold text-slate-800 outline-none"><{availableYears.map((y) => (<option key={y} value={y}>{y}</option>))}></select>
+                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-transparent font-bold text-slate-800 outline-none">{availableYears.map((y) => (<option key={y} value={y}>{y}</option>))}</select>
                 <button onClick={handleAddYear} className="ml-2 p-1 bg-slate-200 hover:bg-blue-100 rounded-full"><Plus size={14} /></button>
              </div>
              <button onClick={clearTable} className="flex items-center gap-1 px-3 py-1.5 bg-white text-orange-600 rounded border border-orange-200 text-xs font-bold"><RotateCcw size={14} /> Temizle</button>
@@ -273,10 +270,9 @@ const NotesPage = ({ user, onClose }) => {
   const [selectedUnit, setSelectedUnit] = useState(UNITS[0]);
   const [noteText, setNoteText] = useState("");
   const [notes, setNotes] = useState([]);
-  const [selectedNote, setSelectedNote] = useState(null); // Detaylı görünüm için
+  const [selectedNote, setSelectedNote] = useState(null); 
   const [loading, setLoading] = useState(false);
 
-  // Notları Getir
   useEffect(() => {
     const q = query(collection(db, "artifacts", appId, "public", "data", "unit_notes"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -317,7 +313,6 @@ const NotesPage = ({ user, onClose }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10">
-      {/* Header */}
       <div className="bg-white sticky top-0 z-10 border-b border-slate-200 px-4 py-3 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
@@ -330,7 +325,6 @@ const NotesPage = ({ user, onClose }) => {
       </div>
 
       <div className="max-w-3xl mx-auto p-4 space-y-6">
-        {/* Not Ekleme Alanı */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-sm font-bold text-slate-700 uppercase mb-4 flex items-center gap-2">
             <FilePlus size={16} /> Yeni Not Ekle
@@ -369,7 +363,6 @@ const NotesPage = ({ user, onClose }) => {
           </div>
         </div>
 
-        {/* Not Listesi */}
         <div className="space-y-3">
            <h3 className="text-sm font-bold text-slate-500 uppercase px-1">Son Eklenen Notlar</h3>
            {notes.length === 0 ? (
@@ -413,7 +406,6 @@ const NotesPage = ({ user, onClose }) => {
         </div>
       </div>
 
-      {/* Detay Modalı */}
       {selectedNote && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedNote(null)}>
           <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -439,11 +431,10 @@ const NotesPage = ({ user, onClose }) => {
   );
 };
 
-// --- YENİ BİLEŞEN: LANDING MENU (Açılış Menüsü) ---
+// --- LANDING MENU ---
 const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Üst Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Operasyon Portalı</h1>
@@ -454,12 +445,8 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
           <button onClick={onLogout} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"><LogOut size={20}/></button>
         </div>
       </div>
-
-      {/* Menü Kartları */}
       <div className="flex-1 p-6 flex items-center justify-center">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-           
-           {/* Kart 1: Admin */}
            <div onClick={() => onNavigate('admin')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-slate-800 transition-colors">
                 <Lock size={32} className="text-slate-600 group-hover:text-white" />
@@ -467,8 +454,6 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               <h3 className="text-lg font-bold text-slate-800 mb-2">Admin Veri Girişi</h3>
               <p className="text-sm text-slate-500">Aylık performans verilerini Excel formatında girmek için.</p>
            </div>
-
-           {/* Kart 2: Birimler */}
            <div onClick={() => onNavigate('dashboard')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
                 <Activity size={32} className="text-blue-600 group-hover:text-white" />
@@ -476,8 +461,6 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birimler</h3>
               <p className="text-sm text-slate-500">Birimlerin performans verilerini ve KPI detaylarını görüntüle.</p>
            </div>
-
-           {/* Kart 3: Notlar */}
            <div onClick={() => onNavigate('notes')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors">
                 <FileText size={32} className="text-orange-500 group-hover:text-white" />
@@ -485,7 +468,6 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birim Notları</h3>
               <p className="text-sm text-slate-500">Birimlerle ilgili operasyonel notlar ekle ve yönet.</p>
            </div>
-
         </div>
       </div>
       <div className="text-center py-4 text-xs text-slate-400">v1.2.0 - Güvenli Sistem</div>
@@ -493,7 +475,7 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
   );
 };
 
-// --- USER PROFILE MODAL (AYNI) ---
+// --- USER PROFILE MODAL ---
 const UserProfileModal = ({ user, onClose }) => {
   const [displayName, setDisplayName] = useState(user.displayName || "");
   const [newPassword, setNewPassword] = useState("");
@@ -534,7 +516,7 @@ const UserProfileModal = ({ user, onClose }) => {
   );
 };
 
-// --- LOGIN SCREEN (AYNI) ---
+// --- LOGIN SCREEN ---
 const LoginScreen = ({ onLogin, loading, error }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -553,9 +535,9 @@ const LoginScreen = ({ onLogin, loading, error }) => {
   );
 };
 
-// --- ANA APP ---
+// --- MAIN APP ---
 export default function App() {
-  const [view, setView] = useState("menu"); // Başlangıçta MENU açılacak
+  const [view, setView] = useState("menu"); 
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allData, setAllData] = useState([]);
@@ -579,19 +561,17 @@ export default function App() {
 
   const handleAppLogin = async (email, password) => {
     setLoginLoading(true); setLoginError("");
-    try { await signInWithEmailAndPassword(auth, email, password); setView("menu"); } // Giriş yapınca Menüye git
+    try { await signInWithEmailAndPassword(auth, email, password); setView("menu"); } 
     catch (e) { setLoginError("Hatalı giriş."); } finally { setLoginLoading(false); }
   };
   const handleAppLogout = async () => { if(window.confirm("Çıkış?")) { await signOut(auth); setView("menu"); } };
 
-  // Data Sync
   useEffect(() => {
     if (!user) { setAllData([]); return; }
     const unsubscribe = onSnapshot(collection(db, "artifacts", appId, "public", "data", "performance_records"), (snap) => setAllData(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     return () => unsubscribe();
   }, [user]);
 
-  // Helpers
   const uniqueUnits = useMemo(() => UNITS, []);
   const filteredUnits = uniqueUnits.filter((unit) => unit.toLowerCase().includes(searchQuery.toLowerCase()));
   const currentData = useMemo(() => {
@@ -610,7 +590,7 @@ export default function App() {
   };
 
   const handleNavigateFromMenu = (target) => {
-      if (target === 'admin') { setShowLoginModal(true); } // Admin şifresi sor
+      if (target === 'admin') { setShowLoginModal(true); } 
       else if (target === 'dashboard') { setView('dashboard'); }
       else if (target === 'notes') { setView('notes'); }
   };
@@ -634,9 +614,6 @@ export default function App() {
   };
   const handleResetAll = () => alert("Devre dışı.");
 
-  // --- RENDER FUNCTIONS ---
-  
-  // 1. DASHBOARD (Liste)
   const renderDashboard = () => (
     <div className="pb-24">
       <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 border-b border-slate-100 px-4 py-3 shadow-sm">
@@ -665,7 +642,6 @@ export default function App() {
     </div>
   );
 
-  // 2. DETAIL (Birim Detay)
   const renderDetail = () => {
     const isTeslimBasarisiz = currentData && parseFloat(currentData.teslimPerformansi) < 94;
     return (
@@ -704,27 +680,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 safe-area-pb">
-      
-      {/* 1. VIEW: MENU */}
-      {view === 'menu' && (
-        <LandingMenu user={user} onNavigate={handleNavigateFromMenu} onLogout={handleAppLogout} onProfile={() => setProfileOpen(true)} />
-      )}
-
-      {/* 2. VIEW: DASHBOARD & DETAIL */}
+      {view === 'menu' && <LandingMenu user={user} onNavigate={handleNavigateFromMenu} onLogout={handleAppLogout} onProfile={() => setProfileOpen(true)} />}
       {view === 'dashboard' && renderDashboard()}
       {view === 'detail' && renderDetail()}
-
-      {/* 3. VIEW: NOTES */}
-      {view === 'notes' && (
-        <NotesPage user={user} onClose={() => setView('menu')} />
-      )}
-
-      {/* ADMIN PANEL */}
+      {view === 'notes' && <NotesPage user={user} onClose={() => setView('menu')} />}
       {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} onImportLocal={handleImportLocal} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
-
-      {/* MODALS */}
       {isProfileOpen && <UserProfileModal user={user} onClose={() => setProfileOpen(false)} />}
-      
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
