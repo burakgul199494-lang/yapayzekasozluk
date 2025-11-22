@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+// --- PART 1: IMPORTS, FIREBASE CONFIG, CONSTANTS, HELPERS ---
+
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search, ArrowLeft, Calendar, AlertCircle, ChevronRight, TrendingUp,
   Box, Activity, CheckCircle2, Truck, Smartphone, Mail, FileText, Lock, Save,
@@ -6,6 +8,7 @@ import {
   RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
 } from "lucide-react";
 
+// --- FIREBASE IMPORTS ---
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -26,6 +29,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  writeBatch
 } from "firebase/firestore";
 
 // --- FIREBASE SETUP ---
@@ -45,14 +49,14 @@ const db = getFirestore(app);
 const appId = "kargo-takip-v1";
 
 // --- HELPERS ---
-const formatNumber = (num) => {
+export const formatNumber = (num) => {
   if (num === undefined || num === null || num === "") return "-";
   const n = parseFloat(num);
   if (isNaN(n)) return "-";
   return n.toFixed(2).replace(".", ",");
 };
 
-const formatDate = (timestamp) => {
+export const formatDate = (timestamp) => {
   if (!timestamp) return "";
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return (
@@ -62,23 +66,9 @@ const formatDate = (timestamp) => {
   );
 };
 
-const MONTH_NAMES = [
-  "",
-  "Oca",
-  "Şub",
-  "Mar",
-  "Nis",
-  "May",
-  "Haz",
-  "Tem",
-  "Ağu",
-  "Eyl",
-  "Eki",
-  "Kas",
-  "Ara",
-];
+export const MONTH_NAMES = ["", "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
-const METRIC_TYPES = [
+export const METRIC_TYPES = [
   { id: "teslimPerformansi", label: "Teslim Perf. %", color: "blue" },
   { id: "rotaOrani", label: "Rota Oranı %", color: "indigo" },
   { id: "tvsOrani", label: "TVS Oranı %", color: "indigo" },
@@ -90,7 +80,7 @@ const METRIC_TYPES = [
   { id: "gidenKargo", label: "Giden Kargo", color: "green" },
 ];
 
-const UNITS = [
+export const UNITS = [
   "BÖLGE", "ADASAN", "ADATEPE", "ALAÇATI", "ARMUTALAN", "ASTİM", "AYDIN DDN", "AYRANCILAR", "BELDİBİ", "BELEN",
   "ÇAMKÖY", "ÇEŞME", "ÇİNE", "DALAMAN", "DATÇA", "DAVUTLAR", "DİDİM", "DOKUZEYLÜL", "EFELER", "EGESER",
   "FETHİYE", "GÖCEK", "GÖLKÖY", "GÜMÜŞLÜK", "GÜNDOĞAN", "GÜVERCİNLİK", "HALİKARNAS", "KALABAK DDN", "KARYA",
@@ -100,7 +90,9 @@ const UNITS = [
   "TURGUTREİS", "UMURBEY", "URLA", "ÜÇGÖZLER", "YALIKAVAK", "YATAĞAN", "YELKEN", "YENİGÜN", "YENİHİSAR", "ZEYBEK",
 ];
 
-// --- COMPONENTS ---
+// PART 1 SONU — PART 2'DE: AdminPanel component'i başlıyor
+// --- PART 2: KPICard & AdminPanel ---
+
 const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => (
   <div
     className={`bg-white p-2.5 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden min-h-[90px] ${
@@ -131,6 +123,7 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
 );
 
 // --- ADMIN PANEL ---
+
 const AdminPanel = ({
   allData,
   onSaveBatch,
@@ -336,7 +329,7 @@ const AdminPanel = ({
     }
   };
 
-    // --- KAYDET: SADECE DOLU HÜCRELER VE GERÇEKTEN YAZILINCA BAŞARILI MESAJ ---
+  // --- KAYDET: SADECE DOLU HÜCRELER + GERÇEK YAZMA SONRASI MESAJ ---
   const handleSave = async () => {
     let recordsToUpdate = [];
 
@@ -378,8 +371,7 @@ const AdminPanel = ({
     }
 
     try {
-      // 🔴 Burada gerçekten Firestore yazma işlemi bitene kadar bekliyoruz
-      await onSaveBatch(recordsToUpdate);
+      await onSaveBatch(recordsToUpdate); // 🔥 Batch işlemi burada
       setPendingChanges(false);
       alert("Veriler başarıyla kaydedildi.");
     } catch (error) {
@@ -563,7 +555,8 @@ const AdminPanel = ({
     </div>
   );
 };
-// --- NOTLAR SAYFASI ---
+// --- PART 3: NOTES, LANDING, PROFILE, LOGIN ---
+
 const NotesPage = ({ user, onClose }) => {
   const [selectedUnit, setSelectedUnit] = useState(UNITS[0]);
   const [noteText, setNoteText] = useState("");
@@ -781,7 +774,6 @@ const NotesPage = ({ user, onClose }) => {
   );
 };
 
-// --- LANDING MENU ---
 const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -867,7 +859,6 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
   );
 };
 
-// --- USER PROFILE MODAL ---
 const UserProfileModal = ({ user, onClose }) => {
   const [displayName, setDisplayName] = useState(user.displayName || "");
   const [newPassword, setNewPassword] = useState("");
@@ -978,7 +969,6 @@ const UserProfileModal = ({ user, onClose }) => {
   );
 };
 
-// --- LOGIN SCREEN ---
 const LoginScreen = ({ onLogin, loading, error }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1055,7 +1045,8 @@ const LoginScreen = ({ onLogin, loading, error }) => {
     </div>
   );
 };
-// --- MAIN APP ---
+// --- PART 4: MAIN APP (BATCH SAVE DAHİL) ---
+
 export default function App() {
   const [view, setView] = useState("menu");
   const [selectedUnit, setSelectedUnit] = useState(null);
@@ -1221,28 +1212,28 @@ export default function App() {
     }
   };
 
-  // 🔴 Firestore'a gerçek kayıt burada yapılıyor
+  // 🔥 BATCH SAVE: quota hatasını çözen kısım
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
-      const promises = records.map((r) =>
-        setDoc(
-          doc(
-            db,
-            "artifacts",
-            appId,
-            "public",
-            "data",
-            "performance_records",
-            r.id
-          ),
-          { ...r },
-          { merge: true }
-        )
-      );
-      await Promise.all(promises);
+      const batch = writeBatch(db);
+
+      records.forEach((r) => {
+        const ref = doc(
+          db,
+          "artifacts",
+          appId,
+          "public",
+          "data",
+          "performance_records",
+          r.id
+        );
+        batch.set(ref, { ...r }, { merge: true });
+      });
+
+      await batch.commit(); // tek istekte hepsini yazar
     } catch (e) {
-      console.error(e);
+      console.error("BATCH SAVE ERROR:", e);
       throw e; // AdminPanel catch edebilsin
     } finally {
       setIsSaving(false);
@@ -1599,5 +1590,3 @@ export default function App() {
     </div>
   );
 }
-
-  
