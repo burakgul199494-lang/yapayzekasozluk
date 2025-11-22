@@ -454,21 +454,21 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
                 <Lock size={32} className="text-slate-600 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Admin Veri Girişi</h3>
-              <p className="text-sm text-slate-500">Aylık performans verilerini Excel formatında girmek için.</p>
+              <p className="text-sm text-slate-500">Aylık performans verilerini sisteme girişi.</p>
            </div>
            <div onClick={() => onNavigate('dashboard')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
                 <Activity size={32} className="text-blue-600 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birimler</h3>
-              <p className="text-sm text-slate-500">Birimlerin performans verilerini ve KPI detaylarını görüntüle.</p>
+              <p className="text-sm text-slate-500">Birimlerin performans verilerini görmek için.</p>
            </div>
            <div onClick={() => onNavigate('notes')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors">
                 <FileText size={32} className="text-orange-500 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Birim Notları</h3>
-              <p className="text-sm text-slate-500">Birimlerle ilgili operasyonel notlar ekle ve yönet.</p>
+              <p className="text-sm text-slate-500">Birimlerle ilgili notlar ekle ve yönet.</p>
            </div>
         </div>
       </div>
@@ -598,7 +598,7 @@ export default function App() {
   };
 
   const handleLoginForAdmin = () => {
-    if (password === "admin123") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
+    if (password === "Marvel3535") { setShowLoginModal(false); setAdminOpen(true); setPassword(""); } 
     else { alert("Hatalı şifre!"); }
   };
 
