@@ -106,6 +106,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
   const [selection, setSelection] = useState({ start: null, end: null, isDragging: false });
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+  // Veriyi Hazırla
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -119,6 +120,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailabl
     setPendingChanges(false);
   }, [selectedYear, selectedMetric, allData]);
 
+  // Global mouse up
   useEffect(() => {
     const handleWindowMouseUp = () => { if (selection.isDragging) setSelection((prev) => ({ ...prev, isDragging: false })); };
     window.addEventListener("mouseup", handleWindowMouseUp);
@@ -556,6 +558,29 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
 
+  // MOBIL ZOOM FIX (2. Adım olarak eklediğimiz kod bloğu)
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      meta.content = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+      const handleBlur = () => {
+          setTimeout(() => {
+              meta.content = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0";
+              window.scrollTo(0, 0);
+          }, 100);
+      };
+      const inputs = document.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+          input.addEventListener('blur', handleBlur);
+      });
+      return () => {
+          inputs.forEach(input => {
+              input.removeEventListener('blur', handleBlur);
+          });
+      };
+    }
+  }, []);
+
   useEffect(() => { const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setAuthLoading(false); }); return () => unsubscribe(); }, []);
 
   const handleAppLogin = async (email, password) => {
@@ -607,6 +632,10 @@ export default function App() {
     } catch(e){console.error(e)} finally{setIsSaving(false)}
   };
   
+  const handleImportLocal = () => {
+      const local = localStorage.getItem("performanceData");
+      if(local && window.confirm("Eski veriler yüklensin mi?")) handleSaveBatch(JSON.parse(local));
+  };
   const handleResetAll = () => alert("Devre dışı.");
 
   const renderDashboard = () => (
@@ -680,7 +709,7 @@ export default function App() {
       {view === 'dashboard' && renderDashboard()}
       {view === 'detail' && renderDetail()}
       {view === 'notes' && <NotesPage user={user} onClose={() => setView('menu')} />}
-      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
+      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} onImportLocal={handleImportLocal} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
       {isProfileOpen && <UserProfileModal user={user} onClose={() => setProfileOpen(false)} />}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
