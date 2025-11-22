@@ -2,7 +2,19 @@
   font-family: sans-serif;
   text-align: center;
 }
-/* Mobil Zoom Sorunu Çözümü */
+/* styles.css - EN ALTINA EKLEYİN */
+
+:root {
+  touch-action: manipulation; /* Tarayıcıya dokunma hareketlerini kısıtla der */
+}
+
+input, select, textarea, button {
+  font-size: 16px !important; /* 16px kuralı */
+  max-height: 100% !important; /* iOS kayma sorunu için */
+  touch-action: manipulation; /* Zoom'u engellemek için en güçlü komut */
+}
+
+/* Sadece mobil cihazlar için ek güvenlik */
 @media screen and (max-width: 768px) {
   input, select, textarea {
     font-size: 16px !important;
