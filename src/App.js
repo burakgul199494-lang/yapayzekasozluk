@@ -193,8 +193,14 @@ const UNITS = [
 ];
 // --- PART 2: KPICard & AdminPanel ---
 
-const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => {
-  // Renk sınıflarını belirle (Tamamen boyalı arka planlar için)
+const KPICard = ({
+  title,
+  value,
+  suffix = "",
+  color = "slate",
+  icon: Icon,
+  comparisonValue, // YENİ: Bölge verisi buraya gelecek
+}) => {
   let bgClass = "bg-white border-slate-100";
   let textClass = "text-slate-600";
   let titleClass = "text-slate-500";
@@ -210,33 +216,48 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
     textClass = "text-white";
     titleClass = "text-emerald-100";
     iconClass = "text-emerald-200";
-  } else if (color === "blue") {
-    // Mavi istenirse diye yedek (ama yeşil kullanacağız)
-    bgClass = "bg-blue-600 border-blue-600 shadow-blue-200";
-    textClass = "text-white";
-    titleClass = "text-blue-100";
-    iconClass = "text-blue-200";
   }
 
   return (
     <div
-      className={`p-3 rounded-xl border shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
+      className={`p-2 py-3 rounded-xl border shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
     >
-      <div className={`absolute top-2 right-2 opacity-20 ${iconClass}`}>
+      <div className={`absolute top-2 right-2 opacity-10 ${iconClass}`}>
         {Icon && <Icon size={32} />}
       </div>
-      
-      <span className={`text-[10px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}>
+
+      <span
+        className={`text-[9px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}
+      >
         {title}
       </span>
-      
-      <div className="flex items-baseline z-10">
-        <span className={`text-2xl font-bold ${textClass}`}>
-          {formatNumber(value)}
-        </span>
-        <span className={`ml-0.5 text-[10px] font-medium opacity-80 ${textClass}`}>
+
+      {/* İÇERİK ALANI: Flex yapısı ile Bölge ve Birim verisini yan yana koyuyoruz */}
+      <div className="flex items-center justify-center gap-2 z-10 w-full">
+        
+        {/* SOL TARAF: BÖLGE VERİSİ (Varsa göster) */}
+        {comparisonValue !== undefined && comparisonValue !== null && (
+          <div className="flex flex-col items-end pr-2 border-r border-white/30">
+            <span className={`text-[8px] font-bold uppercase opacity-70 ${titleClass}`}>
+              BÖLGE
+            </span>
+            <span className={`text-xs font-bold ${textClass} opacity-90`}>
+              {formatNumber(comparisonValue)}
+            </span>
+          </div>
+        )}
+
+        {/* SAĞ TARAF: BİRİM VERİSİ (Ana Veri) */}
+        <div className="flex items-baseline">
+          <span className={`text-xl font-bold ${textClass}`}>
+            {formatNumber(value)}
+          </span>
+          <span
+            className={`ml-0.5 text-[9px] font-medium opacity-80 ${textClass}`}
+          >
             {suffix}
-        </span>
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -1451,13 +1472,25 @@ export default function App() {
   );
 
 const renderDetail = () => {
-    // 94 altı başarısız (Kırmızı), üstü başarılı (Yeşil - Emerald)
+    // 1. MEVCUT BİRİMİN DURUMU
     const isTeslimBasarisiz =
       currentData && parseFloat(currentData.teslimPerformansi) < 94;
 
+    // 2. BÖLGE VERİSİNİ BUL (Aynı Yıl ve Ay için)
+    // Eğer seçili birim zaten "BÖLGE" ise, kendisine kıyaslamasın (null olsun)
+    const regionData =
+      selectedUnit === "BÖLGE"
+        ? null
+        : allData.find(
+            (d) =>
+              d.unit === "BÖLGE" &&
+              d.year === parseInt(selectedYear) &&
+              d.month === parseInt(selectedMonth)
+          );
+
     return (
       <div className="pb-24 bg-slate-50 min-h-screen">
-        {/* --- HEADER KISMI (GÜNCELLENDİ) --- */}
+        {/* --- HEADER --- */}
         <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
           <div className="px-4 py-3 flex items-center gap-3">
             <button
@@ -1466,8 +1499,7 @@ const renderDetail = () => {
             >
               <ArrowLeft size={22} className="text-slate-600" />
             </button>
-            
-            {/* Burası artık statik bir yazı değil, birim değiştirme alanı */}
+
             <div className="flex-1 min-w-0">
               <div className="relative flex items-center w-full max-w-[250px]">
                 <select
@@ -1481,13 +1513,12 @@ const renderDetail = () => {
                     </option>
                   ))}
                 </select>
-                {/* Ok ikonu */}
-                <ChevronDown 
-                  size={18} 
-                  className="absolute right-0 text-slate-400 pointer-events-none" 
+                <ChevronDown
+                  size={18}
+                  className="absolute right-0 text-slate-400 pointer-events-none"
                 />
               </div>
-              
+
               <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
                 <Calendar size={10} />{" "}
                 <span>
@@ -1497,7 +1528,7 @@ const renderDetail = () => {
             </div>
           </div>
 
-          {/* Tarih Seçimi (Aynı kaldı) */}
+          {/* Tarih Seçimi */}
           <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
             <select
               value={selectedYear}
@@ -1533,7 +1564,7 @@ const renderDetail = () => {
         <div className="p-4 space-y-4">
           {currentData ? (
             <>
-              {/* BÜYÜK KART: Teslim Performansı (Yeşil Tasarım) */}
+              {/* BÜYÜK KART: Teslim Performansı */}
               <div
                 className={`rounded-2xl p-6 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
                   isTeslimBasarisiz
@@ -1541,26 +1572,41 @@ const renderDetail = () => {
                     : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200"
                 }`}
               >
-                <div className="relative z-10">
+                <div className="relative z-10 w-full">
                   <p
-                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-2 ${
+                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-3 ${
                       isTeslimBasarisiz ? "text-red-100" : "text-emerald-100"
                     }`}
                   >
                     Teslim Performansı
                   </p>
-                  <div className="flex flex-col items-center">
-                    <h2 className="text-5xl font-extrabold tracking-tight">
-                      {formatNumber(currentData.teslimPerformansi)}%
-                    </h2>
-                    <p className="mt-2 text-sm font-medium px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white">
-                      Hedef: %94
-                    </p>
+                  
+                  {/* BÜYÜK KART İÇİ KIYASLAMA YAPISI */}
+                  <div className="flex items-center justify-center gap-6">
+                    {/* SOL: Bölge */}
+                    {regionData && (
+                        <div className="flex flex-col items-end border-r border-white/30 pr-6">
+                            <span className="text-[10px] uppercase opacity-80 font-bold">Bölge</span>
+                            <span className="text-2xl font-bold opacity-90">{formatNumber(regionData.teslimPerformansi)}%</span>
+                        </div>
+                    )}
+                    
+                    {/* SAĞ: Birim (Ana) */}
+                    <div className="flex flex-col items-start">
+                         <h2 className="text-5xl font-extrabold tracking-tight">
+                            {formatNumber(currentData.teslimPerformansi)}%
+                        </h2>
+                    </div>
                   </div>
+
+                  <p className="mt-4 text-xs font-medium inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white">
+                    Hedef: %94
+                  </p>
                 </div>
               </div>
 
               {/* OPERASYONEL KARTLAR */}
+              {/* comparisonValue prop'unu ekledik */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Operasyonel
@@ -1569,6 +1615,7 @@ const renderDetail = () => {
                   <KPICard
                     title="Rota"
                     value={currentData.rotaOrani}
+                    comparisonValue={regionData?.rotaOrani}
                     suffix="%"
                     color={currentData.rotaOrani <= 80 ? "red" : "green"}
                     icon={TrendingUp}
@@ -1576,6 +1623,7 @@ const renderDetail = () => {
                   <KPICard
                     title="TVS"
                     value={currentData.tvsOrani}
+                    comparisonValue={regionData?.tvsOrani}
                     suffix="%"
                     color={currentData.tvsOrani <= 90 ? "red" : "green"}
                     icon={Activity}
@@ -1583,6 +1631,7 @@ const renderDetail = () => {
                   <KPICard
                     title="Check-in"
                     value={currentData.checkInOrani}
+                    comparisonValue={regionData?.checkInOrani}
                     suffix="%"
                     color={currentData.checkInOrani <= 90 ? "red" : "green"}
                     icon={CheckCircle2}
@@ -1599,6 +1648,7 @@ const renderDetail = () => {
                   <KPICard
                     title="SMS"
                     value={currentData.smsOrani}
+                    comparisonValue={regionData?.smsOrani}
                     suffix="%"
                     color={currentData.smsOrani <= 50 ? "red" : "green"}
                     icon={Smartphone}
@@ -1606,6 +1656,7 @@ const renderDetail = () => {
                   <KPICard
                     title="E-ATF"
                     value={currentData.eAtfOrani}
+                    comparisonValue={regionData?.eAtfOrani}
                     suffix="%"
                     color={currentData.eAtfOrani <= 80 ? "red" : "green"}
                     icon={FileText}
@@ -1613,6 +1664,7 @@ const renderDetail = () => {
                   <KPICard
                     title="E-İhbar"
                     value={currentData.elektronikIhbar}
+                    comparisonValue={regionData?.elektronikIhbar}
                     suffix="%"
                     color={currentData.elektronikIhbar <= 90 ? "red" : "green"}
                     icon={Mail}
@@ -1620,7 +1672,7 @@ const renderDetail = () => {
                 </div>
               </div>
 
-              {/* HACİM KARTLARI */}
+              {/* HACİM KARTLARI (Hacim genelde bölge ile kıyaslanmaz çünkü bölge toplamdır, ama yine de istenirse açılabilir) */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Hacim
