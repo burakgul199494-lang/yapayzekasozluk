@@ -1,10 +1,8 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search, ArrowLeft, Calendar, AlertCircle, ChevronRight, TrendingUp,
   Box, Activity, CheckCircle2, Truck, Smartphone, Mail, FileText, Lock, Save,
-  LogOut, Grid, Plus, Trash2, RotateCcw, Layers, Download, UploadCloud,
+  LogOut, Grid, Plus, Trash2, RotateCcw, Layers,
   RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
 } from "lucide-react";
 
@@ -99,17 +97,16 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
   </div>
 );
 
-// --- ADMIN PANEL (EXCEL GİRİŞİ) ---
-const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears, setAvailableYears, onImportLocal, isSaving }) => {
+// --- ADMIN PANEL (SADELEŞTİRİLMİŞ) ---
+const AdminPanel = ({ allData, onSaveBatch, onClose, availableYears, setAvailableYears, isSaving }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMetric, setSelectedMetric] = useState("teslimPerformansi");
   const [gridData, setGridData] = useState({});
-  const fileInputRef = useRef(null);
-  const [lastSaved, setLastSaved] = useState(Date.now());
   const [pendingChanges, setPendingChanges] = useState(false);
   const [selection, setSelection] = useState({ start: null, end: null, isDragging: false });
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+  // Veriyi Hazırla
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -120,14 +117,10 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
       });
     });
     setGridData(newGrid);
+    setPendingChanges(false); // Yıl veya metrik değişince pending state'i sıfırla
   }, [selectedYear, selectedMetric, allData]);
 
-  useEffect(() => {
-    if (!pendingChanges) return;
-    const timer = setTimeout(() => { handleSave(); setPendingChanges(false); setLastSaved(Date.now()); }, 2000);
-    return () => clearTimeout(timer);
-  }, [gridData, pendingChanges]);
-
+  // Global mouse up
   useEffect(() => {
     const handleWindowMouseUp = () => { if (selection.isDragging) setSelection((prev) => ({ ...prev, isDragging: false })); };
     window.addEventListener("mouseup", handleWindowMouseUp);
@@ -136,7 +129,7 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
 
   const handleInputChange = (unit, month, value) => {
     setGridData((prev) => ({ ...prev, [unit]: { ...prev[unit], [month]: value } }));
-    setPendingChanges(true);
+    setPendingChanges(true); // Değişiklik olduğunu işaretle
   };
   
   const handleMouseDown = (r, c) => { setSelection({ start: { r, c }, end: { r, c }, isDragging: true }); };
@@ -209,9 +202,6 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
     const handleFocus = (e, r, c) => { e.target.select(); if (!selection.isDragging) setSelection({ start: { r, c }, end: { r, c }, isDragging: false }); };
     const handleAddYear = () => { const nextYear = availableYears[availableYears.length - 1] + 1; setAvailableYears([...availableYears, nextYear]); setSelectedYear(nextYear); };
     const clearTable = () => { if (window.confirm(`DİKKAT: ${selectedYear} yılı temizlenecek.`)) { const newGrid = {}; UNITS.forEach((unit) => { newGrid[unit] = { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "", 10: "", 11: "", 12: "" }; }); setGridData(newGrid); setPendingChanges(true); } };
-    const handleGlobalReset = async () => { if (window.confirm("Tüm veriler silinecektir. Emin misiniz?")) onResetAll(); };
-    const handleDownloadBackup = () => { const dataStr = JSON.stringify(allData, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `yedek.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); };
-    const handleUploadBackup = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const importedData = JSON.parse(event.target.result); if (Array.isArray(importedData)) { onSaveBatch(importedData); alert("Yüklendi!"); } } catch (err) { alert("Hata: " + err.message); } }; reader.readAsText(file); e.target.value = null; };
     
     const handleSave = () => {
         let updatedData = [...allData];
@@ -230,18 +220,30 @@ const AdminPanel = ({ allData, onSaveBatch, onClose, onResetAll, availableYears,
           });
         });
         onSaveBatch(updatedData);
+        setPendingChanges(false); // Kayıt başarılı olunca pendingChanges kapat
+        alert("Veriler Başarıyla Kaydedildi!");
     };
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
        <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between shadow-md gap-2">
-         <div className="flex items-center gap-3"><Grid className="text-blue-400" size={24} /><div><h2 className="text-lg font-bold">Yıllık Veri Girişi</h2>{pendingChanges && <span className="text-xs bg-yellow-500 text-black px-2 py-0.5 rounded animate-pulse">Kaydediliyor...</span>}</div></div>
+         <div className="flex items-center gap-3">
+             <Grid className="text-blue-400" size={24} />
+             <div>
+                 <h2 className="text-lg font-bold">Yıllık Veri Girişi</h2>
+                 {pendingChanges && <span className="text-xs bg-yellow-500 text-black px-2 py-0.5 rounded font-bold">Kaydedilmemiş Değişiklikler Var</span>}
+             </div>
+         </div>
+         {/* SADECE KAYDET VE ÇIKIŞ BUTONLARI */}
          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex bg-slate-800 rounded-lg p-1 mr-2"><button onClick={handleDownloadBackup} className="px-3 py-1.5 text-xs text-slate-300 hover:text-white"><Download size={14}/></button><button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 text-xs text-slate-300 hover:text-white"><UploadCloud size={14}/></button><input type="file" ref={fileInputRef} onChange={handleUploadBackup} className="hidden" accept=".json"/></div>
-            <button onClick={onImportLocal} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-bold"><RefreshCw size={16}/></button>
-            <button onClick={handleGlobalReset} className="bg-red-900/50 text-white px-3 py-2 rounded-lg text-sm"><Trash2 size={16}/></button>
-            <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold"><Save size={16}/></button>
-            <button onClick={onClose} className="bg-slate-700 text-white px-3 py-2 rounded-lg text-sm"><LogOut size={16}/></button>
+            <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors flex items-center gap-2">
+                {isSaving ? <RefreshCw className="animate-spin" size={16}/> : <Save size={16}/>} 
+                Kaydet
+            </button>
+            <button onClick={onClose} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                <LogOut size={16}/> 
+                Çıkış
+            </button>
          </div>
        </div>
        <div className="bg-slate-100 border-b border-slate-200">
@@ -608,10 +610,6 @@ export default function App() {
     } catch(e){console.error(e)} finally{setIsSaving(false)}
   };
   
-  const handleImportLocal = () => {
-      const local = localStorage.getItem("performanceData");
-      if(local && window.confirm("Eski veriler yüklensin mi?")) handleSaveBatch(JSON.parse(local));
-  };
   const handleResetAll = () => alert("Devre dışı.");
 
   const renderDashboard = () => (
@@ -684,7 +682,7 @@ export default function App() {
       {view === 'dashboard' && renderDashboard()}
       {view === 'detail' && renderDetail()}
       {view === 'notes' && <NotesPage user={user} onClose={() => setView('menu')} />}
-      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} onImportLocal={handleImportLocal} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
+      {isAdminOpen && <AdminPanel allData={allData} onSaveBatch={handleSaveBatch} onClose={() => { setAdminOpen(false); setView('menu'); }} onResetAll={handleResetAll} availableYears={availableYears} setAvailableYears={setAvailableYears} isSaving={isSaving} />}
       {isProfileOpen && <UserProfileModal user={user} onClose={() => setProfileOpen(false)} />}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
