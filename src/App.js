@@ -199,66 +199,59 @@ const KPICard = ({
   suffix = "",
   color = "slate",
   icon: Icon,
-  comparisonValue, // YENİ: Bölge verisi buraya gelecek
+  comparisonValue,
 }) => {
   let bgClass = "bg-white border-slate-100";
   let textClass = "text-slate-600";
   let titleClass = "text-slate-500";
   let iconClass = "text-slate-300";
+  let badgeClass = "bg-slate-100 text-slate-500"; // Bölge etiketi rengi
 
   if (color === "red") {
     bgClass = "bg-red-600 border-red-600 shadow-red-200";
     textClass = "text-white";
     titleClass = "text-red-100";
     iconClass = "text-red-200";
+    badgeClass = "bg-white/20 text-white"; // Kırmızı zemin üzerinde beyaz transparan
   } else if (color === "green" || color === "emerald") {
     bgClass = "bg-emerald-600 border-emerald-600 shadow-emerald-200";
     textClass = "text-white";
     titleClass = "text-emerald-100";
     iconClass = "text-emerald-200";
+    badgeClass = "bg-white/20 text-white"; // Yeşil zemin üzerinde beyaz transparan
   }
 
   return (
     <div
-      className={`p-2 py-3 rounded-xl border shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
+      className={`p-3 rounded-xl border shadow-sm flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[110px] transition-transform active:scale-95 ${bgClass}`}
     >
-      <div className={`absolute top-2 right-2 opacity-10 ${iconClass}`}>
-        {Icon && <Icon size={32} />}
+      <div className={`absolute top-2 right-2 opacity-20 ${iconClass}`}>
+        {Icon && <Icon size={28} />}
       </div>
 
       <span
-        className={`text-[9px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}
+        className={`text-[10px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}
       >
         {title}
       </span>
 
-      {/* İÇERİK ALANI: Flex yapısı ile Bölge ve Birim verisini yan yana koyuyoruz */}
-      <div className="flex items-center justify-center gap-2 z-10 w-full">
-        
-        {/* SOL TARAF: BÖLGE VERİSİ (Varsa göster) */}
-        {comparisonValue !== undefined && comparisonValue !== null && (
-          <div className="flex flex-col items-end pr-2 border-r border-white/30">
-            <span className={`text-[8px] font-bold uppercase opacity-70 ${titleClass}`}>
-              BÖLGE
-            </span>
-            <span className={`text-xs font-bold ${textClass} opacity-90`}>
-              {formatNumber(comparisonValue)}
-            </span>
-          </div>
-        )}
-
-        {/* SAĞ TARAF: BİRİM VERİSİ (Ana Veri) */}
-        <div className="flex items-baseline">
-          <span className={`text-xl font-bold ${textClass}`}>
-            {formatNumber(value)}
-          </span>
-          <span
-            className={`ml-0.5 text-[9px] font-medium opacity-80 ${textClass}`}
-          >
-            {suffix}
-          </span>
-        </div>
+      {/* ANA VERİ */}
+      <div className="flex items-baseline z-10 mb-2">
+        <span className={`text-2xl font-bold ${textClass} tracking-tight`}>
+          {formatNumber(value)}
+        </span>
+        <span className={`ml-0.5 text-[10px] font-medium opacity-80 ${textClass}`}>
+          {suffix}
+        </span>
       </div>
+
+      {/* BÖLGE VERİSİ (BADGE ŞEKLİNDE ALTTA) */}
+      {comparisonValue !== undefined && comparisonValue !== null && (
+        <div className={`z-10 px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 ${badgeClass}`}>
+          <span className="opacity-70 uppercase">BÖLGE:</span>
+          <span>{formatNumber(comparisonValue)}</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -1476,8 +1469,7 @@ const renderDetail = () => {
     const isTeslimBasarisiz =
       currentData && parseFloat(currentData.teslimPerformansi) < 94;
 
-    // 2. BÖLGE VERİSİNİ BUL (Aynı Yıl ve Ay için)
-    // Eğer seçili birim zaten "BÖLGE" ise, kendisine kıyaslamasın (null olsun)
+    // 2. BÖLGE VERİSİNİ BUL
     const regionData =
       selectedUnit === "BÖLGE"
         ? null
@@ -1566,7 +1558,7 @@ const renderDetail = () => {
             <>
               {/* BÜYÜK KART: Teslim Performansı */}
               <div
-                className={`rounded-2xl p-6 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
+                className={`rounded-2xl p-5 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
                   isTeslimBasarisiz
                     ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
                     : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200"
@@ -1574,28 +1566,33 @@ const renderDetail = () => {
               >
                 <div className="relative z-10 w-full">
                   <p
-                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-3 ${
+                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-4 ${
                       isTeslimBasarisiz ? "text-red-100" : "text-emerald-100"
                     }`}
                   >
                     Teslim Performansı
                   </p>
-                  
-                  {/* BÜYÜK KART İÇİ KIYASLAMA YAPISI */}
-                  <div className="flex items-center justify-center gap-6">
-                    {/* SOL: Bölge */}
-                    {regionData && (
-                        <div className="flex flex-col items-end border-r border-white/30 pr-6">
-                            <span className="text-[10px] uppercase opacity-80 font-bold">Bölge</span>
-                            <span className="text-2xl font-bold opacity-90">{formatNumber(regionData.teslimPerformansi)}%</span>
-                        </div>
-                    )}
+
+                  {/* Mobilde alt alta (flex-col), biraz geniş ekranda yan yana (sm:flex-row) */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
                     
-                    {/* SAĞ: Birim (Ana) */}
-                    <div className="flex flex-col items-start">
-                         <h2 className="text-5xl font-extrabold tracking-tight">
-                            {formatNumber(currentData.teslimPerformansi)}%
-                        </h2>
+                    {/* BÖLGE VERİSİ (Varsa) */}
+                    {regionData && (
+                      <div className="flex flex-col items-center sm:items-end sm:border-r border-white/30 sm:pr-8 pb-2 sm:pb-0 border-b sm:border-b-0 w-full sm:w-auto">
+                        <span className="text-[10px] uppercase opacity-80 font-bold mb-1">
+                          Bölge Ort.
+                        </span>
+                        <span className="text-2xl font-bold opacity-90">
+                          {formatNumber(regionData.teslimPerformansi)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* ANA VERİ */}
+                    <div className="flex flex-col items-center sm:items-start">
+                      <h2 className="text-5xl font-extrabold tracking-tight leading-none">
+                        {formatNumber(currentData.teslimPerformansi)}%
+                      </h2>
                     </div>
                   </div>
 
@@ -1606,12 +1603,12 @@ const renderDetail = () => {
               </div>
 
               {/* OPERASYONEL KARTLAR */}
-              {/* comparisonValue prop'unu ekledik */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Operasyonel
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
+                {/* MOBİLDE 2 SÜTUN, PC'DE 3 SÜTUN */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <KPICard
                     title="Rota"
                     value={currentData.rotaOrani}
@@ -1644,7 +1641,7 @@ const renderDetail = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Dijital
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <KPICard
                     title="SMS"
                     value={currentData.smsOrani}
@@ -1672,7 +1669,7 @@ const renderDetail = () => {
                 </div>
               </div>
 
-              {/* HACİM KARTLARI (Hacim genelde bölge ile kıyaslanmaz çünkü bölge toplamdır, ama yine de istenirse açılabilir) */}
+              {/* HACİM KARTLARI */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Hacim
