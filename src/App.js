@@ -200,36 +200,39 @@ const KPICard = ({
   color = "slate",
   icon: Icon,
   comparisonValue,
-  targetValue, // Opsiyonel: Eğer hedef verisi de göstermek istersen
+  target, // YENİ: Hedef değeri buraya gelecek
 }) => {
   let bgClass = "bg-white border-slate-100";
   let textClass = "text-slate-600";
   let titleClass = "text-slate-500";
   let iconClass = "text-slate-300";
   let footerClass = "bg-slate-50 text-slate-500 border-t border-slate-100";
+  let targetClass = "bg-slate-100 text-slate-500"; // Varsayılan hedef rengi
 
   if (color === "red") {
     bgClass = "bg-red-600 border-red-600 shadow-red-200";
     textClass = "text-white";
     titleClass = "text-red-100";
     iconClass = "text-red-200";
-    footerClass = "bg-black/10 text-white border-t border-white/10"; // Kırmızı üstüne hafif koyu şerit
+    footerClass = "bg-black/10 text-white border-t border-white/10";
+    targetClass = "bg-white/20 text-white"; // Kırmızı üstünde beyaz
   } else if (color === "green" || color === "emerald") {
     bgClass = "bg-emerald-600 border-emerald-600 shadow-emerald-200";
     textClass = "text-white";
     titleClass = "text-emerald-100";
     iconClass = "text-emerald-200";
-    footerClass = "bg-black/10 text-white border-t border-white/10"; // Yeşil üstüne hafif koyu şerit
+    footerClass = "bg-black/10 text-white border-t border-white/10";
+    targetClass = "bg-white/20 text-white"; // Yeşil üstünde beyaz
   }
 
   return (
     <div
-      className={`rounded-xl border shadow-sm flex flex-col relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
+      className={`rounded-xl border shadow-sm flex flex-col relative overflow-hidden min-h-[110px] transition-transform active:scale-95 ${bgClass}`}
     >
       {/* ÜST KISIM: İkon ve Başlık */}
       <div className="p-2 pb-0 flex flex-col items-center text-center relative z-10">
-        <div className={`opacity-30 mb-1 ${iconClass}`}>
-          {Icon && <Icon size={20} />}
+        <div className={`opacity-30 mb-0.5 ${iconClass}`}>
+          {Icon && <Icon size={18} />}
         </div>
         <span
           className={`text-[9px] font-bold uppercase tracking-wider leading-tight ${titleClass}`}
@@ -238,12 +241,19 @@ const KPICard = ({
         </span>
       </div>
 
-      {/* ORTA KISIM: Ana Veri */}
-      <div className="flex-1 flex items-center justify-center z-10 -mt-1">
-        <span className={`text-xl font-bold tracking-tight ${textClass}`}>
+      {/* ORTA KISIM: Ana Veri ve HEDEF */}
+      <div className="flex-1 flex flex-col items-center justify-center z-10 pb-1">
+        <span className={`text-xl font-bold tracking-tight leading-none mb-1 ${textClass}`}>
           {formatNumber(value)}
           <span className="text-[10px] opacity-80 font-normal ml-0.5">{suffix}</span>
         </span>
+        
+        {/* HEDEF ALANI (YENİ) */}
+        {target !== undefined && (
+          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm ${targetClass}`}>
+            Hedef: %{target}
+          </span>
+        )}
       </div>
 
       {/* ALT KISIM (Footer): Bölge Verisi */}
@@ -1565,7 +1575,6 @@ const renderDetail = () => {
                     : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200 text-white"
                 }`}
               >
-                {/* Üst Kısım: Ana Veri */}
                 <div className="p-5 pb-4">
                   <p
                     className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-2 ${
@@ -1582,7 +1591,7 @@ const renderDetail = () => {
                   </p>
                 </div>
 
-                {/* Alt Kısım: Bölge Kıyaslaması (Footer Tarzı) */}
+                {/* Bölge Ortalaması */}
                 {regionData && (
                   <div className="bg-black/10 py-2 flex items-center justify-center gap-2 border-t border-white/10">
                     <span className="text-[10px] uppercase opacity-80 font-bold">
@@ -1600,12 +1609,12 @@ const renderDetail = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Operasyonel
                 </h3>
-                {/* TEKRAR 3 SÜTUN YAPILDI (grid-cols-3) */}
                 <div className="grid grid-cols-3 gap-2">
                   <KPICard
                     title="Rota"
                     value={currentData.rotaOrani}
                     comparisonValue={regionData?.rotaOrani}
+                    target={80} // HEDEF %80
                     suffix="%"
                     color={currentData.rotaOrani <= 80 ? "red" : "green"}
                     icon={TrendingUp}
@@ -1614,6 +1623,7 @@ const renderDetail = () => {
                     title="TVS"
                     value={currentData.tvsOrani}
                     comparisonValue={regionData?.tvsOrani}
+                    target={90} // HEDEF %90
                     suffix="%"
                     color={currentData.tvsOrani <= 90 ? "red" : "green"}
                     icon={Activity}
@@ -1622,6 +1632,7 @@ const renderDetail = () => {
                     title="Check-in"
                     value={currentData.checkInOrani}
                     comparisonValue={regionData?.checkInOrani}
+                    target={90} // HEDEF %90
                     suffix="%"
                     color={currentData.checkInOrani <= 90 ? "red" : "green"}
                     icon={CheckCircle2}
@@ -1639,6 +1650,7 @@ const renderDetail = () => {
                     title="SMS"
                     value={currentData.smsOrani}
                     comparisonValue={regionData?.smsOrani}
+                    target={50} // HEDEF %50
                     suffix="%"
                     color={currentData.smsOrani <= 50 ? "red" : "green"}
                     icon={Smartphone}
@@ -1647,6 +1659,7 @@ const renderDetail = () => {
                     title="E-ATF"
                     value={currentData.eAtfOrani}
                     comparisonValue={regionData?.eAtfOrani}
+                    target={80} // HEDEF %80
                     suffix="%"
                     color={currentData.eAtfOrani <= 80 ? "red" : "green"}
                     icon={FileText}
@@ -1655,6 +1668,7 @@ const renderDetail = () => {
                     title="E-İhbar"
                     value={currentData.elektronikIhbar}
                     comparisonValue={regionData?.elektronikIhbar}
+                    target={90} // HEDEF %90
                     suffix="%"
                     color={currentData.elektronikIhbar <= 90 ? "red" : "green"}
                     icon={Mail}
