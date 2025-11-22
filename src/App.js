@@ -6,7 +6,6 @@ import {
   RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
 } from "lucide-react";
 
-// --- FIREBASE IMPORTS ---
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -26,7 +25,7 @@ import {
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
 } from "firebase/firestore";
 
 // --- FIREBASE SETUP ---
@@ -150,9 +149,10 @@ const AdminPanel = ({
     end: null,
     isDragging: false,
   });
+
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  // Veriyi Hazırla
+  // Veriyi grid'e yükle
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -171,7 +171,7 @@ const AdminPanel = ({
     setPendingChanges(false);
   }, [selectedYear, selectedMetric, allData]);
 
-  // Global mouse up
+  // Global mouse up (seçimi bırakmak için)
   useEffect(() => {
     const handleWindowMouseUp = () => {
       if (selection.isDragging)
@@ -192,6 +192,7 @@ const AdminPanel = ({
   const handleMouseDown = (r, c) => {
     setSelection({ start: { r, c }, end: { r, c }, isDragging: true });
   };
+
   const handleMouseEnter = (r, c) => {
     if (selection.isDragging)
       setSelection((prev) => ({ ...prev, end: { r, c } }));
@@ -335,29 +336,27 @@ const AdminPanel = ({
     }
   };
 
-  // --- DÜZELTİLMİŞ VE GÜVENLİ SAVE FONKSİYONU ---
-  const handleSave = () => {
-    const recordsToUpdate = [];
+    // --- KAYDET: SADECE DOLU HÜCRELER VE GERÇEKTEN YAZILINCA BAŞARILI MESAJ ---
+  const handleSave = async () => {
+    let recordsToUpdate = [];
 
     UNITS.forEach((unit) => {
       const unitRow = gridData[unit] || {};
       MONTH_INDICES.forEach((month) => {
         const rawValue = unitRow[month];
 
-        // Hücre hiç yoksa veya null/undefined ise atla
         if (rawValue === undefined || rawValue === null) return;
 
         const cleanStr = String(rawValue).trim().replace(",", ".");
 
-        // Boş veya "undefined" ise kaydetme
         if (cleanStr === "" || cleanStr.toLowerCase() === "undefined") return;
 
         const parsed = parseFloat(cleanStr);
-        if (Number.isNaN(parsed)) return; // Sayı değilse kaydetme
+        if (Number.isNaN(parsed)) return;
 
         const finalValue = selectedMetric.includes("Kargo")
-          ? Math.round(parsed) // gelen/giden kargo adedi
-          : Number(parsed.toFixed(2)); // oranlar için 2 hane
+          ? Math.round(parsed)
+          : Number(parsed.toFixed(2));
 
         const docId = `${unit}-${selectedYear}-${month}`;
 
@@ -378,12 +377,17 @@ const AdminPanel = ({
       return;
     }
 
-    onSaveBatch(recordsToUpdate);
-    setPendingChanges(false);
-    alert("Veriler Başarıyla Kaydedildi!");
+    try {
+      // 🔴 Burada gerçekten Firestore yazma işlemi bitene kadar bekliyoruz
+      await onSaveBatch(recordsToUpdate);
+      setPendingChanges(false);
+      alert("Veriler başarıyla kaydedildi.");
+    } catch (error) {
+      console.error("Kayıt hatası:", error);
+      alert("Kayıt sırasında bir hata oluştu.");
+    }
   };
 
-  // --- YÜKLEME EKRANI KONTROLÜ ---
   if (isLoadingData) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
@@ -414,6 +418,7 @@ const AdminPanel = ({
           <button
             onClick={handleSave}
             className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors flex items-center gap-2"
+            disabled={isSaving}
           >
             {isSaving ? (
               <RefreshCw className="animate-spin" size={16} />
@@ -558,7 +563,6 @@ const AdminPanel = ({
     </div>
   );
 };
-
 // --- NOTLAR SAYFASI ---
 const NotesPage = ({ user, onClose }) => {
   const [selectedUnit, setSelectedUnit] = useState(UNITS[0]);
@@ -1051,7 +1055,6 @@ const LoginScreen = ({ onLogin, loading, error }) => {
     </div>
   );
 };
-
 // --- MAIN APP ---
 export default function App() {
   const [view, setView] = useState("menu");
@@ -1068,9 +1071,7 @@ export default function App() {
   const [dataLoading, setDataLoading] = useState(true);
 
   const [availableYears, setAvailableYears] = useState([2024, 2025, 2026]);
-  const [selectedYear, setSelectedYear] = useState(
-    new Date().getFullYear()
-  );
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().getMonth() + 1
   );
@@ -1080,7 +1081,7 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
 
-  // MOBIL ZOOM FIX
+  // Mobil zoom fix
   useEffect(() => {
     const meta = document.querySelector('meta[name="viewport"]');
     if (meta) {
@@ -1134,7 +1135,7 @@ export default function App() {
     }
   };
 
-  // VERİ ÇEKME
+  // Firestore veri çekme
   useEffect(() => {
     if (!user) {
       setAllData([]);
@@ -1173,7 +1174,6 @@ export default function App() {
     );
   }, [allData, selectedUnit, selectedYear, selectedMonth]);
 
-  // --- DÜZELTİLMİŞ UNIT CLICK ---
   const handleUnitClick = (unit) => {
     setSelectedUnit(unit);
     const unitData = allData.filter((d) => d.unit === unit);
@@ -1221,6 +1221,7 @@ export default function App() {
     }
   };
 
+  // 🔴 Firestore'a gerçek kayıt burada yapılıyor
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
@@ -1235,7 +1236,6 @@ export default function App() {
             "performance_records",
             r.id
           ),
-          // Plain object gönderiyoruz
           { ...r },
           { merge: true }
         )
@@ -1243,6 +1243,7 @@ export default function App() {
       await Promise.all(promises);
     } catch (e) {
       console.error(e);
+      throw e; // AdminPanel catch edebilsin
     } finally {
       setIsSaving(false);
     }
@@ -1253,6 +1254,7 @@ export default function App() {
     if (local && window.confirm("Eski veriler yüklensin mi?"))
       handleSaveBatch(JSON.parse(local));
   };
+
   const handleResetAll = () => alert("Devre dışı.");
 
   const renderDashboard = () => (
@@ -1424,27 +1426,21 @@ export default function App() {
                     title="Rota"
                     value={currentData.rotaOrani}
                     suffix="%"
-                    color={
-                      currentData.rotaOrani <= 80 ? "red" : "emerald"
-                    }
+                    color={currentData.rotaOrani <= 80 ? "red" : "emerald"}
                     icon={TrendingUp}
                   />
                   <KPICard
                     title="TVS"
                     value={currentData.tvsOrani}
                     suffix="%"
-                    color={
-                      currentData.tvsOrani <= 90 ? "red" : "emerald"
-                    }
+                    color={currentData.tvsOrani <= 90 ? "red" : "emerald"}
                     icon={Activity}
                   />
                   <KPICard
                     title="Check-in"
                     value={currentData.checkInOrani}
                     suffix="%"
-                    color={
-                      currentData.checkInOrani <= 90 ? "red" : "emerald"
-                    }
+                    color={currentData.checkInOrani <= 90 ? "red" : "emerald"}
                     icon={CheckCircle2}
                   />
                 </div>
@@ -1520,6 +1516,7 @@ export default function App() {
         <RefreshCw className="animate-spin text-slate-400" size={32} />
       </div>
     );
+
   if (!user)
     return (
       <LoginScreen
@@ -1568,7 +1565,7 @@ export default function App() {
 
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Lock className="text-slate-800" /> Admin Yetkisi
             </h3>
@@ -1602,3 +1599,5 @@ export default function App() {
     </div>
   );
 }
+
+  
