@@ -192,34 +192,54 @@ const UNITS = [
 ];
 // --- PART 2: KPICard & AdminPanel ---
 
-const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => (
-  <div
-    className={`bg-white p-2.5 rounded-xl border shadow-sm flex flex-col justify-between relative overflow-hidden min-h-[90px] ${
-      color === "red" ? "border-red-200 bg-red-50" : "border-slate-100"
-    }`}
-  >
+const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => {
+  // Renk sınıflarını belirle (Tamamen boyalı arka planlar için)
+  let bgClass = "bg-white border-slate-100";
+  let textClass = "text-slate-600";
+  let titleClass = "text-slate-500";
+  let iconClass = "text-slate-300";
+
+  if (color === "red") {
+    bgClass = "bg-red-600 border-red-600 shadow-red-200";
+    textClass = "text-white";
+    titleClass = "text-red-100";
+    iconClass = "text-red-200";
+  } else if (color === "green" || color === "emerald") {
+    bgClass = "bg-emerald-600 border-emerald-600 shadow-emerald-200";
+    textClass = "text-white";
+    titleClass = "text-emerald-100";
+    iconClass = "text-emerald-200";
+  } else if (color === "blue") {
+    // Mavi istenirse diye yedek (ama yeşil kullanacağız)
+    bgClass = "bg-blue-600 border-blue-600 shadow-blue-200";
+    textClass = "text-white";
+    titleClass = "text-blue-100";
+    iconClass = "text-blue-200";
+  }
+
+  return (
     <div
-      className={`absolute top-1 right-1 opacity-20 ${
-        color === "red" ? "text-red-500" : `text-${color}-500`
-      }`}
+      className={`p-3 rounded-xl border shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
     >
-      {Icon && <Icon size={24} />}
-    </div>
-    <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider z-10 leading-tight">
-      {title}
-    </span>
-    <div className="flex items-baseline mt-2 z-10">
-      <span
-        className={`text-lg font-bold ${
-          color === "red" ? "text-red-600" : `text-${color}-600`
-        }`}
-      >
-        {formatNumber(value)}
+      <div className={`absolute top-2 right-2 opacity-20 ${iconClass}`}>
+        {Icon && <Icon size={32} />}
+      </div>
+      
+      <span className={`text-[10px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}>
+        {title}
       </span>
-      <span className="text-slate-400 ml-0.5 text-[10px]">{suffix}</span>
+      
+      <div className="flex items-baseline z-10">
+        <span className={`text-2xl font-bold ${textClass}`}>
+          {formatNumber(value)}
+        </span>
+        <span className={`ml-0.5 text-[10px] font-medium opacity-80 ${textClass}`}>
+            {suffix}
+        </span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AdminPanel = ({
   allData,
@@ -1429,11 +1449,14 @@ export default function App() {
     </div>
   );
 
-  const renderDetail = () => {
+const renderDetail = () => {
+    // 94 altı başarısız (Kırmızı), üstü başarılı (Yeşil - Emerald)
     const isTeslimBasarisiz =
       currentData && parseFloat(currentData.teslimPerformansi) < 94;
+
     return (
       <div className="pb-24 bg-slate-50 min-h-screen">
+        {/* Header Kısmı */}
         <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
           <div className="px-4 py-3 flex items-center gap-3">
             <button
@@ -1454,6 +1477,7 @@ export default function App() {
               </div>
             </div>
           </div>
+          {/* Tarih Seçimi */}
           <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
             <select
               value={selectedYear}
@@ -1489,30 +1513,32 @@ export default function App() {
         <div className="p-4 space-y-4">
           {currentData ? (
             <>
+              {/* BÜYÜK KART: Teslim Performansı */}
               <div
-                className={`rounded-2xl p-5 text-white shadow-lg mb-2 relative overflow-hidden ${
+                className={`rounded-2xl p-6 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
                   isTeslimBasarisiz
                     ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
-                    : "bg-gradient-to-br from-indigo-600 to-blue-700 shadow-indigo-200"
+                    : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200" 
+                    // YUKARIDAKİ SATIR: Mavi yerine Yeşil (Emerald/Green) gradient yapıldı.
                 }`}
               >
                 <div className="relative z-10">
                   <p
-                    className={`text-xs font-medium uppercase tracking-wider opacity-80 ${
-                      isTeslimBasarisiz ? "text-red-100" : "text-indigo-100"
+                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-2 ${
+                      isTeslimBasarisiz ? "text-red-100" : "text-emerald-100"
                     }`}
                   >
                     Teslim Performansı
                   </p>
-                  <div className="flex items-end gap-2 mt-1">
-                    <h2 className="text-4xl font-bold">
+                  <div className="flex flex-col items-center">
+                    <h2 className="text-5xl font-extrabold tracking-tight">
                       {formatNumber(currentData.teslimPerformansi)}%
                     </h2>
                     <p
-                      className={`mb-1.5 text-sm ${
+                      className={`mt-2 text-sm font-medium px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm ${
                         isTeslimBasarisiz
-                          ? "text-red-100"
-                          : "text-indigo-200"
+                          ? "text-white"
+                          : "text-white"
                       }`}
                     >
                       Hedef: %94
@@ -1521,82 +1547,85 @@ export default function App() {
                 </div>
               </div>
 
+              {/* OPERASYONEL KARTLAR */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Operasyonel
                 </h3>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <KPICard
                     title="Rota"
                     value={currentData.rotaOrani}
                     suffix="%"
-                    color={currentData.rotaOrani <= 80 ? "red" : "emerald"}
+                    // Başarılı ise 'green', değilse 'red'
+                    color={currentData.rotaOrani <= 80 ? "red" : "green"}
                     icon={TrendingUp}
                   />
                   <KPICard
                     title="TVS"
                     value={currentData.tvsOrani}
                     suffix="%"
-                    color={currentData.tvsOrani <= 90 ? "red" : "emerald"}
+                    color={currentData.tvsOrani <= 90 ? "red" : "green"}
                     icon={Activity}
                   />
                   <KPICard
                     title="Check-in"
                     value={currentData.checkInOrani}
                     suffix="%"
-                    color={currentData.checkInOrani <= 90 ? "red" : "emerald"}
+                    color={currentData.checkInOrani <= 90 ? "red" : "green"}
                     icon={CheckCircle2}
                   />
                 </div>
               </div>
 
+              {/* DİJİTAL KARTLAR (SMS vb.) */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Dijital
                 </h3>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <KPICard
                     title="SMS"
                     value={currentData.smsOrani}
                     suffix="%"
-                    color={currentData.smsOrani <= 50 ? "red" : "blue"}
+                    // ESKİDEN BLUE İDİ, ŞİMDİ GREEN YAPTIK
+                    color={currentData.smsOrani <= 50 ? "red" : "green"}
                     icon={Smartphone}
                   />
                   <KPICard
                     title="E-ATF"
                     value={currentData.eAtfOrani}
                     suffix="%"
-                    color={currentData.eAtfOrani <= 80 ? "red" : "blue"}
+                    color={currentData.eAtfOrani <= 80 ? "red" : "green"}
                     icon={FileText}
                   />
                   <KPICard
                     title="E-İhbar"
                     value={currentData.elektronikIhbar}
                     suffix="%"
-                    color={
-                      currentData.elektronikIhbar <= 90 ? "red" : "blue"
-                    }
+                    color={currentData.elektronikIhbar <= 90 ? "red" : "green"}
                     icon={Mail}
                   />
                 </div>
               </div>
 
+              {/* HACİM KARTLARI (Bunları beyaz bırakıyoruz veya isteğe göre boyayabiliriz) */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Hacim
                 </h3>
                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
                   <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
-                    <Truck size={20} className="text-slate-300 mb-1" />
-                    <p className="text-xs text-slate-400 mb-1">Gelen</p>
-                    <p className="text-xl font-bold text-slate-800">
+                    <Truck size={24} className="text-slate-300 mb-2" />
+                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">Gelen</p>
+                    <p className="text-2xl font-bold text-slate-800">
                       {currentData.gelenKargo}
                     </p>
                   </div>
                   <div className="flex-1 text-center flex flex-col items-center">
-                    <Box size={20} className="text-slate-300 mb-1" />
-                    <p className="text-xs text-slate-400 mb-1">Giden</p>
-                    <p className="text-xl font-bold text-slate-800">
+                    <Box size={24} className="text-slate-300 mb-2" />
+                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">Giden</p>
+                    <p className="text-2xl font-bold text-slate-800">
                       {currentData.gidenKargo}
                     </p>
                   </div>
@@ -1606,7 +1635,7 @@ export default function App() {
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Box size={48} className="mb-4 opacity-20" />
-              <p className="text-sm">Veri yok.</p>
+              <p className="text-sm">Bu dönem için veri girişi yapılmamış.</p>
             </div>
           )}
         </div>
