@@ -190,6 +190,7 @@ const UNITS = [
   "YENİHİSAR",
   "ZEYBEK",
 ];
+
 // --- PART 2: KPICard & AdminPanel ---
 
 const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => (
@@ -409,18 +410,8 @@ const AdminPanel = ({
       const newGrid = {};
       UNITS.forEach((unit) => {
         newGrid[unit] = {
-          1: "",
-          2: "",
-          3: "",
-          4: "",
-          5: "",
-          6: "",
-          7: "",
-          8: "",
-          9: "",
-          10: "",
-          11: "",
-          12: "",
+          1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
+          7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
         };
       });
       setGridData(newGrid);
@@ -428,7 +419,7 @@ const AdminPanel = ({
     }
   };
 
-  // --- KAYDET: sadece dolu hücreler toplanır, batch'e gönderilir ---
+  // --- DÜZELTİLEN KAYDET FONKSİYONU ---
   const handleSave = async () => {
     let recordsToUpdate = [];
 
@@ -436,12 +427,15 @@ const AdminPanel = ({
       const unitRow = gridData[unit] || {};
       MONTH_INDICES.forEach((month) => {
         const rawValue = unitRow[month];
+        
+        // Değer kontrolü: undefined, null veya boşlukları atla
         if (rawValue === undefined || rawValue === null) return;
-
+        
         const cleanStr = String(rawValue).trim().replace(",", ".");
         if (cleanStr === "" || cleanStr.toLowerCase() === "undefined") return;
 
         const parsed = parseFloat(cleanStr);
+        // Sayı olmayan değerleri kaydetme
         if (Number.isNaN(parsed)) return;
 
         const finalValue = selectedMetric.includes("Kargo")
@@ -451,7 +445,7 @@ const AdminPanel = ({
         const record = {
           unit,
           year: parseInt(selectedYear),
-          month,
+          month: parseInt(month),
           [selectedMetric]: finalValue,
         };
 
@@ -460,17 +454,17 @@ const AdminPanel = ({
     });
 
     if (recordsToUpdate.length === 0) {
-      alert("Kaydedilecek veri bulunamadı. Önce tabloya değer giriniz.");
+      alert("Kaydedilecek geçerli veri bulunamadı. Önce tabloya değer giriniz.");
       return;
     }
 
     try {
-      await onSaveBatch(recordsToUpdate); // gerçek kayıt burada
+      await onSaveBatch(recordsToUpdate);
       setPendingChanges(false);
-      alert("Veriler başarıyla kaydedildi.");
+      // alert("Veriler başarıyla kaydedildi."); // Batch fonksiyonunda zaten alert var
     } catch (error) {
       console.error("Kayıt hatası:", error);
-      alert("Kayıt sırasında bir hata oluştu.");
+      alert("Kayıt sırasında bir hata oluştu. Konsolu kontrol edin.");
     }
   };
 
@@ -1339,32 +1333,52 @@ export default function App() {
     }
   };
 
-  // --- YENİ BATCH SAVE: performance_records / year / unit / month ---
+  // --- HATA GİDERİLMİŞ BATCH SAVE FONKSİYONU ---
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
-      // 1 batch max 500 write, biz güvenli olsun diye 400'lük parçalar yapıyoruz
+      console.log("🔥 Batch kaydı başlatılıyor...", records.length, "kayıt.");
+      
+      // Firestore batch limiti 500'dür. Güvenlik için 400'er 400'er işliyoruz.
       const chunkSize = 400;
+      
       for (let i = 0; i < records.length; i += chunkSize) {
         const chunk = records.slice(i, i + chunkSize);
-        const batch = writeBatch(db);
+        const batch = writeBatch(db); 
 
         chunk.forEach((r) => {
-          const ref = doc(
-            db,
-            "performance_records",
-            String(r.year),
-            r.unit,
-            String(r.month)
-          );
-          batch.set(ref, { ...r }, { merge: true });
+          // 1. HATA ÖNLEYİCİ: Yol (Path) parametrelerini garantiye al
+          const yearPath = String(r.year);
+          const unitPath = r.unit; 
+          const monthPath = String(r.month);
+
+          // Eğer bunlardan biri boşsa işlem yapma
+          if (!yearPath || !unitPath || !monthPath) {
+            console.error("❌ Hatalı Kayıt Atlandı (ID eksik):", r);
+            return;
+          }
+
+          // 2. HATA ÖNLEYİCİ: İçinde 'undefined' olan verileri temizle
+          // Firestore { deger: undefined } kabul etmez!
+          // JSON.stringify(obj) undefined değerleri otomatik olarak siler.
+          const cleanData = JSON.parse(JSON.stringify(r)); 
+
+          // 3. Referansı oluştur
+          // Yapı: performance_records / {YIL} / {BIRIM_ADI} / {AY_NO}
+          const ref = doc(db, "performance_records", yearPath, unitPath, monthPath);
+          
+          batch.set(ref, cleanData, { merge: true });
         });
 
         await batch.commit();
+        console.log(`✅ Paket tamamlandı: ${i + chunk.length} / ${records.length}`);
       }
+      
+      alert("Tüm veriler başarıyla veritabanına yazıldı.");
+      
     } catch (e) {
-      console.error("BATCH SAVE ERROR:", e);
-      throw e;
+      console.error("🚨 BATCH KAYIT HATASI:", e);
+      alert("Kayıt başarısız! Hata detayı için F12 > Console sekmesine bak.");
     } finally {
       setIsSaving(false);
     }
