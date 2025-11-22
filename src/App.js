@@ -918,6 +918,7 @@ const NotesPage = ({ user, onClose }) => {
 const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Üst Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Operasyon Portalı</h1>
@@ -928,20 +929,24 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
         <div className="flex gap-2">
           <button
             onClick={onProfile}
-            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <UserCog size={20} />
           </button>
           <button
             onClick={onLogout}
-            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
           >
             <LogOut size={20} />
           </button>
         </div>
       </div>
+
+      {/* Ana Menü Butonları */}
       <div className="flex-1 p-6 flex items-center justify-center">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+          
+          {/* 1. ADMIN PANELİ */}
           <div
             onClick={() => onNavigate("admin")}
             className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
@@ -959,9 +964,11 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               Aylık performans verilerini Excel formatında girmek için.
             </p>
           </div>
+
+          {/* 2. BİRİMLER (DÜZELTİLDİ: 'felx-col' -> 'flex-col' yapıldı) */}
           <div
             onClick={() => onNavigate("dashboard")}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex felx-col items-center text-center"
+            className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
           >
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
               <Activity
@@ -974,6 +981,8 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               Birimlerin performans verilerini ve KPI detaylarını görüntüle.
             </p>
           </div>
+
+          {/* 3. BİRİM NOTLARI */}
           <div
             onClick={() => onNavigate("notes")}
             className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group flex flex-col items-center text-center"
@@ -991,10 +1000,12 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
               Birimlerle ilgili operasyonel notlar ekle ve yönet.
             </p>
           </div>
+
         </div>
       </div>
+      
       <div className="text-center py-4 text-xs text-slate-400">
-        v1.2.0 - Güvenli Sistem
+        v1.3.0 - Güvenli Sistem
       </div>
     </div>
   );
