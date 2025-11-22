@@ -916,6 +916,10 @@ const NotesPage = ({ user, onClose }) => {
 };
 
 const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
+  // Admin yetkisi kontrolü (Sadece senin mail adresin)
+  // E-posta harf büyüklüğü sorununu önlemek için toLowerCase() kullanıyoruz.
+  const isAdmin = user?.email?.toLowerCase() === "burak.gul@yurticikargo.com";
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Üst Bar */}
@@ -944,28 +948,38 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
 
       {/* Ana Menü Butonları */}
       <div className="flex-1 p-6 flex items-center justify-center">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+        {/* Grid Yapısı Dinamikleşti:
+            - Eğer Admin ise: md:grid-cols-3 (3 yan yana)
+            - Admin değilse: md:grid-cols-2 (2 yan yana ve ortalı)
+        */}
+        <div 
+          className={`grid grid-cols-1 gap-6 w-full max-w-4xl ${
+            isAdmin ? "md:grid-cols-3" : "md:grid-cols-2"
+          }`}
+        >
           
-          {/* 1. ADMIN PANELİ */}
-          <div
-            onClick={() => onNavigate("admin")}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
-          >
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-slate-800 transition-colors">
-              <Lock
-                size={32}
-                className="text-slate-600 group-hover:text-white"
-              />
+          {/* 1. ADMIN PANELİ (Sadece Admin Görebilir) */}
+          {isAdmin && (
+            <div
+              onClick={() => onNavigate("admin")}
+              className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
+            >
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-slate-800 transition-colors">
+                <Lock
+                  size={32}
+                  className="text-slate-600 group-hover:text-white"
+                />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">
+                Admin Veri Girişi
+              </h3>
+              <p className="text-sm text-slate-500">
+                Aylık performans verilerini Excel formatında girmek için.
+              </p>
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">
-              Admin Veri Girişi
-            </h3>
-            <p className="text-sm text-slate-500">
-              Aylık performans verilerini Excel formatında girmek için.
-            </p>
-          </div>
+          )}
 
-          {/* 2. BİRİMLER (DÜZELTİLDİ: 'felx-col' -> 'flex-col' yapıldı) */}
+          {/* 2. BİRİMLER (Herkes Görebilir) */}
           <div
             onClick={() => onNavigate("dashboard")}
             className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
@@ -982,7 +996,7 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
             </p>
           </div>
 
-          {/* 3. BİRİM NOTLARI */}
+          {/* 3. BİRİM NOTLARI (Herkes Görebilir) */}
           <div
             onClick={() => onNavigate("notes")}
             className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group flex flex-col items-center text-center"
@@ -1005,7 +1019,7 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
       </div>
       
       <div className="text-center py-4 text-xs text-slate-400">
-        v1.3.0 - Güvenli Sistem
+        v1.4.0 - Güvenli Sistem
       </div>
     </div>
   );
