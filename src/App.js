@@ -48,6 +48,7 @@ import {
   getFirestore,
   collection,
   doc,
+  setDoc,
   addDoc,
   deleteDoc,
   onSnapshot,
@@ -55,7 +56,6 @@ import {
   orderBy,
   serverTimestamp,
   writeBatch,
-  getDocs,
 } from "firebase/firestore";
 
 // --- FIREBASE SETUP ---
@@ -190,7 +190,6 @@ const UNITS = [
   "YENİHİSAR",
   "ZEYBEK",
 ];
-
 // --- PART 2: KPICard & AdminPanel ---
 
 const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => (
@@ -222,8 +221,6 @@ const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => 
   </div>
 );
 
-// --- ADMIN PANEL ---
-
 const AdminPanel = ({
   allData,
   onSaveBatch,
@@ -245,7 +242,7 @@ const AdminPanel = ({
 
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  // Firestore'dan gelen veriyi grid'e dağıt
+  // Firestore'dan gelen veriyi grid'e yay
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -264,7 +261,7 @@ const AdminPanel = ({
     setPendingChanges(false);
   }, [selectedYear, selectedMetric, allData]);
 
-  // Mouse up - seçim bırakma
+  // global mouse up
   useEffect(() => {
     const handleWindowMouseUp = () => {
       if (selection.isDragging)
@@ -410,8 +407,18 @@ const AdminPanel = ({
       const newGrid = {};
       UNITS.forEach((unit) => {
         newGrid[unit] = {
-          1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
-          7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
+          1: "",
+          2: "",
+          3: "",
+          4: "",
+          5: "",
+          6: "",
+          7: "",
+          8: "",
+          9: "",
+          10: "",
+          11: "",
+          12: "",
         };
       });
       setGridData(newGrid);
@@ -419,7 +426,7 @@ const AdminPanel = ({
     }
   };
 
-  // --- DÜZELTİLEN KAYDET FONKSİYONU ---
+  // --- KAYDET: sadece dolu hücreler, tek metrik, batch ile yaz ---
   const handleSave = async () => {
     let recordsToUpdate = [];
 
@@ -427,25 +434,25 @@ const AdminPanel = ({
       const unitRow = gridData[unit] || {};
       MONTH_INDICES.forEach((month) => {
         const rawValue = unitRow[month];
-        
-        // Değer kontrolü: undefined, null veya boşlukları atla
         if (rawValue === undefined || rawValue === null) return;
-        
+
         const cleanStr = String(rawValue).trim().replace(",", ".");
         if (cleanStr === "" || cleanStr.toLowerCase() === "undefined") return;
 
         const parsed = parseFloat(cleanStr);
-        // Sayı olmayan değerleri kaydetme
         if (Number.isNaN(parsed)) return;
 
         const finalValue = selectedMetric.includes("Kargo")
           ? Math.round(parsed)
           : Number(parsed.toFixed(2));
 
+        const docId = `${unit}-${selectedYear}-${month}`;
+
         const record = {
+          id: docId,
           unit,
           year: parseInt(selectedYear),
-          month: parseInt(month),
+          month,
           [selectedMetric]: finalValue,
         };
 
@@ -454,17 +461,17 @@ const AdminPanel = ({
     });
 
     if (recordsToUpdate.length === 0) {
-      alert("Kaydedilecek geçerli veri bulunamadı. Önce tabloya değer giriniz.");
+      alert("Kaydedilecek veri bulunamadı. Önce tabloya değer giriniz.");
       return;
     }
 
     try {
-      await onSaveBatch(recordsToUpdate);
+      await onSaveBatch(recordsToUpdate); // gerçek yazma burada
       setPendingChanges(false);
-      // alert("Veriler başarıyla kaydedildi."); // Batch fonksiyonunda zaten alert var
+      alert("Veriler başarıyla kaydedildi.");
     } catch (error) {
       console.error("Kayıt hatası:", error);
-      alert("Kayıt sırasında bir hata oluştu. Konsolu kontrol edin.");
+      alert("Kayıt sırasında bir hata oluştu.");
     }
   };
 
@@ -1133,7 +1140,7 @@ const LoginScreen = ({ onLogin, loading, error }) => {
     </div>
   );
 };
-// --- PART 4: MAIN APP (YENİ FIRESTORE PATH + BATCH CHUNK) ---
+// --- PART 4: MAIN APP ---
 
 export default function App() {
   const [view, setView] = useState("menu");
@@ -1215,8 +1222,7 @@ export default function App() {
     }
   };
 
-  // --- YENİ FIRESTORE OKUMA ---
-  // performance_records / {year} / {unit} / {month}
+  // --- FIRESTORE'DAN TÜM PERFORMANS VERİLERİNİ ÇEK ---
   useEffect(() => {
     if (!user) {
       setAllData([]);
@@ -1225,51 +1231,33 @@ export default function App() {
 
     setDataLoading(true);
 
-    const loadAllData = async () => {
-      try {
-        const yearsToLoad = availableYears;
+    const colRef = collection(
+      db,
+      "artifacts",
+      appId,
+      "public",
+      "data",
+      "performance_records"
+    );
 
-        const all = [];
-
-        for (const year of yearsToLoad) {
-          const yearCol = collection(db, "performance_records", String(year));
-          const yearSnap = await getDocs(yearCol);
-
-          // year altında unit doc'ları var; her birinin altında month alt koleksiyonu
-          const unitDocs = yearSnap.docs;
-
-          for (const unitDoc of unitDocs) {
-            const unitName = unitDoc.id;
-            const monthsCol = collection(
-              db,
-              "performance_records",
-              String(year),
-              unitName
-            );
-            const monthsSnap = await getDocs(monthsCol);
-            monthsSnap.forEach((mDoc) => {
-              const data = mDoc.data();
-              all.push({
-                id: `${year}-${unitName}-${mDoc.id}`,
-                unit: unitName,
-                year: Number(year),
-                month: Number(mDoc.id),
-                ...data,
-              });
-            });
-          }
-        }
-
-        setAllData(all);
-      } catch (e) {
-        console.error("Load data error:", e);
-      } finally {
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snap) => {
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        setAllData(list);
+        setDataLoading(false);
+      },
+      (error) => {
+        console.error("Load data error:", error);
         setDataLoading(false);
       }
-    };
+    );
 
-    loadAllData();
-  }, [user, availableYears]);
+    return () => unsubscribe();
+  }, [user]);
 
   const uniqueUnits = useMemo(() => UNITS, []);
   const filteredUnits = uniqueUnits.filter((unit) =>
@@ -1333,52 +1321,33 @@ export default function App() {
     }
   };
 
-  // --- HATA GİDERİLMİŞ BATCH SAVE FONKSİYONU ---
+  // --- BATCH SAVE: artifacts/appId/public/data/performance_records/{id} ---
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
-      console.log("🔥 Batch kaydı başlatılıyor...", records.length, "kayıt.");
-      
-      // Firestore batch limiti 500'dür. Güvenlik için 400'er 400'er işliyoruz.
       const chunkSize = 400;
-      
       for (let i = 0; i < records.length; i += chunkSize) {
         const chunk = records.slice(i, i + chunkSize);
-        const batch = writeBatch(db); 
+        const batch = writeBatch(db);
 
         chunk.forEach((r) => {
-          // 1. HATA ÖNLEYİCİ: Yol (Path) parametrelerini garantiye al
-          const yearPath = String(r.year);
-          const unitPath = r.unit; 
-          const monthPath = String(r.month);
-
-          // Eğer bunlardan biri boşsa işlem yapma
-          if (!yearPath || !unitPath || !monthPath) {
-            console.error("❌ Hatalı Kayıt Atlandı (ID eksik):", r);
-            return;
-          }
-
-          // 2. HATA ÖNLEYİCİ: İçinde 'undefined' olan verileri temizle
-          // Firestore { deger: undefined } kabul etmez!
-          // JSON.stringify(obj) undefined değerleri otomatik olarak siler.
-          const cleanData = JSON.parse(JSON.stringify(r)); 
-
-          // 3. Referansı oluştur
-          // Yapı: performance_records / {YIL} / {BIRIM_ADI} / {AY_NO}
-          const ref = doc(db, "performance_records", yearPath, unitPath, monthPath);
-          
-          batch.set(ref, cleanData, { merge: true });
+          const ref = doc(
+            db,
+            "artifacts",
+            appId,
+            "public",
+            "data",
+            "performance_records",
+            r.id
+          );
+          batch.set(ref, { ...r }, { merge: true });
         });
 
         await batch.commit();
-        console.log(`✅ Paket tamamlandı: ${i + chunk.length} / ${records.length}`);
       }
-      
-      alert("Tüm veriler başarıyla veritabanına yazıldı.");
-      
     } catch (e) {
-      console.error("🚨 BATCH KAYIT HATASI:", e);
-      alert("Kayıt başarısız! Hata detayı için F12 > Console sekmesine bak.");
+      console.error("BATCH SAVE ERROR:", e);
+      throw e;
     } finally {
       setIsSaving(false);
     }
