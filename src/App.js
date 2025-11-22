@@ -200,55 +200,56 @@ const KPICard = ({
   color = "slate",
   icon: Icon,
   comparisonValue,
+  targetValue, // Opsiyonel: Eğer hedef verisi de göstermek istersen
 }) => {
   let bgClass = "bg-white border-slate-100";
   let textClass = "text-slate-600";
   let titleClass = "text-slate-500";
   let iconClass = "text-slate-300";
-  let badgeClass = "bg-slate-100 text-slate-500"; // Bölge etiketi rengi
+  let footerClass = "bg-slate-50 text-slate-500 border-t border-slate-100";
 
   if (color === "red") {
     bgClass = "bg-red-600 border-red-600 shadow-red-200";
     textClass = "text-white";
     titleClass = "text-red-100";
     iconClass = "text-red-200";
-    badgeClass = "bg-white/20 text-white"; // Kırmızı zemin üzerinde beyaz transparan
+    footerClass = "bg-black/10 text-white border-t border-white/10"; // Kırmızı üstüne hafif koyu şerit
   } else if (color === "green" || color === "emerald") {
     bgClass = "bg-emerald-600 border-emerald-600 shadow-emerald-200";
     textClass = "text-white";
     titleClass = "text-emerald-100";
     iconClass = "text-emerald-200";
-    badgeClass = "bg-white/20 text-white"; // Yeşil zemin üzerinde beyaz transparan
+    footerClass = "bg-black/10 text-white border-t border-white/10"; // Yeşil üstüne hafif koyu şerit
   }
 
   return (
     <div
-      className={`p-3 rounded-xl border shadow-sm flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[110px] transition-transform active:scale-95 ${bgClass}`}
+      className={`rounded-xl border shadow-sm flex flex-col relative overflow-hidden min-h-[100px] transition-transform active:scale-95 ${bgClass}`}
     >
-      <div className={`absolute top-2 right-2 opacity-20 ${iconClass}`}>
-        {Icon && <Icon size={28} />}
+      {/* ÜST KISIM: İkon ve Başlık */}
+      <div className="p-2 pb-0 flex flex-col items-center text-center relative z-10">
+        <div className={`opacity-30 mb-1 ${iconClass}`}>
+          {Icon && <Icon size={20} />}
+        </div>
+        <span
+          className={`text-[9px] font-bold uppercase tracking-wider leading-tight ${titleClass}`}
+        >
+          {title}
+        </span>
       </div>
 
-      <span
-        className={`text-[10px] font-bold uppercase tracking-wider z-10 leading-tight mb-1 ${titleClass}`}
-      >
-        {title}
-      </span>
-
-      {/* ANA VERİ */}
-      <div className="flex items-baseline z-10 mb-2">
-        <span className={`text-2xl font-bold ${textClass} tracking-tight`}>
+      {/* ORTA KISIM: Ana Veri */}
+      <div className="flex-1 flex items-center justify-center z-10 -mt-1">
+        <span className={`text-xl font-bold tracking-tight ${textClass}`}>
           {formatNumber(value)}
-        </span>
-        <span className={`ml-0.5 text-[10px] font-medium opacity-80 ${textClass}`}>
-          {suffix}
+          <span className="text-[10px] opacity-80 font-normal ml-0.5">{suffix}</span>
         </span>
       </div>
 
-      {/* BÖLGE VERİSİ (BADGE ŞEKLİNDE ALTTA) */}
+      {/* ALT KISIM (Footer): Bölge Verisi */}
       {comparisonValue !== undefined && comparisonValue !== null && (
-        <div className={`z-10 px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 ${badgeClass}`}>
-          <span className="opacity-70 uppercase">BÖLGE:</span>
+        <div className={`px-1 py-1 text-[8px] font-bold text-center flex items-center justify-center gap-1 ${footerClass}`}>
+          <span className="opacity-70 uppercase tracking-tight">BÖLGE:</span>
           <span>{formatNumber(comparisonValue)}</span>
         </div>
       )}
@@ -1558,48 +1559,40 @@ const renderDetail = () => {
             <>
               {/* BÜYÜK KART: Teslim Performansı */}
               <div
-                className={`rounded-2xl p-5 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
+                className={`rounded-2xl shadow-lg mb-4 relative overflow-hidden flex flex-col text-center ${
                   isTeslimBasarisiz
-                    ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
-                    : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200"
+                    ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200 text-white"
+                    : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200 text-white"
                 }`}
               >
-                <div className="relative z-10 w-full">
+                {/* Üst Kısım: Ana Veri */}
+                <div className="p-5 pb-4">
                   <p
-                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-4 ${
+                    className={`text-xs font-bold uppercase tracking-widest opacity-90 mb-2 ${
                       isTeslimBasarisiz ? "text-red-100" : "text-emerald-100"
                     }`}
                   >
                     Teslim Performansı
                   </p>
-
-                  {/* Mobilde alt alta (flex-col), biraz geniş ekranda yan yana (sm:flex-row) */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                    
-                    {/* BÖLGE VERİSİ (Varsa) */}
-                    {regionData && (
-                      <div className="flex flex-col items-center sm:items-end sm:border-r border-white/30 sm:pr-8 pb-2 sm:pb-0 border-b sm:border-b-0 w-full sm:w-auto">
-                        <span className="text-[10px] uppercase opacity-80 font-bold mb-1">
-                          Bölge Ort.
-                        </span>
-                        <span className="text-2xl font-bold opacity-90">
-                          {formatNumber(regionData.teslimPerformansi)}%
-                        </span>
-                      </div>
-                    )}
-
-                    {/* ANA VERİ */}
-                    <div className="flex flex-col items-center sm:items-start">
-                      <h2 className="text-5xl font-extrabold tracking-tight leading-none">
-                        {formatNumber(currentData.teslimPerformansi)}%
-                      </h2>
-                    </div>
-                  </div>
-
-                  <p className="mt-4 text-xs font-medium inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white">
+                  <h2 className="text-5xl font-extrabold tracking-tight leading-none">
+                    {formatNumber(currentData.teslimPerformansi)}%
+                  </h2>
+                  <p className="mt-2 text-xs font-medium inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm">
                     Hedef: %94
                   </p>
                 </div>
+
+                {/* Alt Kısım: Bölge Kıyaslaması (Footer Tarzı) */}
+                {regionData && (
+                  <div className="bg-black/10 py-2 flex items-center justify-center gap-2 border-t border-white/10">
+                    <span className="text-[10px] uppercase opacity-80 font-bold">
+                      BÖLGE ORTALAMASI:
+                    </span>
+                    <span className="text-sm font-bold">
+                      {formatNumber(regionData.teslimPerformansi)}%
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* OPERASYONEL KARTLAR */}
@@ -1607,8 +1600,8 @@ const renderDetail = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Operasyonel
                 </h3>
-                {/* MOBİLDE 2 SÜTUN, PC'DE 3 SÜTUN */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {/* TEKRAR 3 SÜTUN YAPILDI (grid-cols-3) */}
+                <div className="grid grid-cols-3 gap-2">
                   <KPICard
                     title="Rota"
                     value={currentData.rotaOrani}
@@ -1641,7 +1634,7 @@ const renderDetail = () => {
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Dijital
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <KPICard
                     title="SMS"
                     value={currentData.smsOrani}
@@ -1706,13 +1699,6 @@ const renderDetail = () => {
       </div>
     );
   };
-
-  if (authLoading)
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <RefreshCw className="animate-spin text-slate-400" size={32} />
-      </div>
-    );
 
   if (!user)
     return (
