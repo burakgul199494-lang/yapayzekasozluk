@@ -454,7 +454,7 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
                 <Lock size={32} className="text-slate-600 group-hover:text-white" />
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Admin Veri Girişi</h3>
-              <p className="text-sm text-slate-500">Aylık performans verilerini sisteme girişi.</p>
+              <p className="text-sm text-slate-500">Aylık performans verilerinin girişi.</p>
            </div>
            <div onClick={() => onNavigate('dashboard')} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
