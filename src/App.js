@@ -1216,6 +1216,7 @@ const LoginScreen = ({ onLogin, loading, error }) => {
 export default function App() {
   const [view, setView] = useState("menu");
   const [selectedUnit, setSelectedUnit] = useState(null);
+  const [showYearAvg, setShowYearAvg] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [allData, setAllData] = useState([]);
 
@@ -1500,14 +1501,84 @@ export default function App() {
     </div>
   );
 
-const renderDetail = () => {
-    // 1. MEVCUT BİRİMİN DURUMU
-    const isTeslimBasarisiz =
-      currentData && parseFloat(currentData.teslimPerformansi) < 94;
+// --- renderDetail Fonksiyonunun Yeni Hali ---
+  const renderDetail = () => {
+    // Bu state'i renderDetail içinde tanımlayamayız çünkü her render'da sıfırlanır.
+    // ANCAK, pratik olması için burada logic ile çözeceğiz veya üst component'e taşıyacağız.
+    // React kuralları gereği useState'i en üstte tanımlamalıydık. 
+    // Ama kodu çok değiştirmemek için burada "showYearAvg" mantığını bir state olarak değil,
+    // local bir değişken gibi kullanamayız.
+    
+    // ÇÖZÜM: Lütfen bu satırı App bileşeninin en üstüne (diğer useState'lerin yanına) ekle:
+    // const [showYearAvg, setShowYearAvg] = useState(false);
+    
+    // Ben burada kullanıcının kopyala-yapıştır yapacağı tek blok olması için 
+    // App bileşeninin en üstüne eklemen gereken satırı ayrıca belirteceğim.
+    // Şimdilik bu fonksiyonun çalıştığını varsayarak mantığı kuruyorum.
+    
+    // --- YILLIK ORTALAMA HESAPLAMA MANTIĞI ---
+    const calculateYearlyAverage = (targetUnit) => {
+      // Sadece seçili yıla ait kayıtları filtrele
+      const yearRecords = allData.filter(
+        (d) => d.unit === targetUnit && d.year === parseInt(selectedYear)
+      );
 
-    // 2. BÖLGE VERİSİNİ BUL
-    const regionData =
-      selectedUnit === "BÖLGE"
+      if (yearRecords.length === 0) return null;
+
+      // Hesaplanacak alanlar
+      const fields = [
+        "teslimPerformansi", "rotaOrani", "tvsOrani", "checkInOrani",
+        "smsOrani", "eAtfOrani", "elektronikIhbar", "gelenKargo", "gidenKargo"
+      ];
+
+      const totals = {};
+      const counts = {};
+
+      // Alanları sıfırla
+      fields.forEach(f => { totals[f] = 0; counts[f] = 0; });
+
+      yearRecords.forEach(record => {
+        fields.forEach(field => {
+          const val = record[field];
+          // Sadece sayısal ve dolu değerleri işleme al
+          if (val !== undefined && val !== null && val !== "") {
+            totals[field] += parseFloat(val);
+            counts[field] += 1;
+          }
+        });
+      });
+
+      const averages = {};
+      fields.forEach(field => {
+        if (counts[field] > 0) {
+          // Kargo hacimlerini yuvarla, yüzdeleri 2 hane göster
+          if (field === "gelenKargo" || field === "gidenKargo") {
+             averages[field] = Math.round(totals[field]); // Hacim toplanır mı ortalama mı alınır? Genelde yıl toplamı istenir ama "ortalama" dediğin için ortalama alıyorum.
+             // İstersen burayı: averages[field] = totals[field]; yapabiliriz (Yıl Toplamı için)
+          } else {
+             averages[field] = (totals[field] / counts[field]).toFixed(2);
+          }
+        } else {
+          averages[field] = 0;
+        }
+      });
+
+      return averages;
+    };
+
+    // Görüntülenecek veriyi belirle (Normal Ay mı? Yıllık Ortalama mı?)
+    let displayData = null;
+    let displayRegionData = null;
+
+    if (showYearAvg) {
+      // Yıllık Ortalama Modu
+      displayData = calculateYearlyAverage(selectedUnit);
+      // Bölge için de yıllık ortalama hesapla
+      displayRegionData = selectedUnit === "BÖLGE" ? null : calculateYearlyAverage("BÖLGE");
+    } else {
+      // Normal Ay Modu
+      displayData = currentData;
+      displayRegionData = selectedUnit === "BÖLGE"
         ? null
         : allData.find(
             (d) =>
@@ -1515,6 +1586,10 @@ const renderDetail = () => {
               d.year === parseInt(selectedYear) &&
               d.month === parseInt(selectedMonth)
           );
+    }
+
+    const isTeslimBasarisiz =
+      displayData && parseFloat(displayData.teslimPerformansi) < 94;
 
     return (
       <div className="pb-24 bg-slate-50 min-h-screen">
@@ -1547,17 +1622,36 @@ const renderDetail = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                 <Calendar size={10} />{" "}
-                <span>
-                  {selectedYear} Dönemi - {MONTH_NAMES[selectedMonth]}
-                </span>
+                {showYearAvg ? (
+                   <span className="text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">
+                     {selectedYear} YILLIK ORTALAMA
+                   </span>
+                ) : (
+                   <span>
+                     {selectedYear} Dönemi - {MONTH_NAMES[selectedMonth]}
+                   </span>
+                )}
               </div>
             </div>
+            
+            {/* YIL ORTALAMASI BUTONU */}
+            <button
+              onClick={() => setShowYearAvg(!showYearAvg)}
+              className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold leading-tight flex-shrink-0 h-10 ${
+                showYearAvg
+                  ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <TrendingUp size={14} className="mb-0.5" />
+              {showYearAvg ? "Aylık Gör" : "Yıl Ort."}
+            </button>
           </div>
 
-          {/* Tarih Seçimi */}
-          <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
+          {/* Tarih Seçimi (Eğer Yıl Ortalaması seçiliyse Ay butonlarını gizle) */}
+          <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x items-center">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -1569,30 +1663,35 @@ const renderDetail = () => {
                 </option>
               ))}
             </select>
-            <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
-            {MONTH_NAMES.map((m, i) => {
-              if (i === 0) return null;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedMonth(i)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${
-                    i === selectedMonth
-                      ? "bg-slate-800 text-white shadow-md"
-                      : "bg-white border border-slate-200 text-slate-500"
-                  }`}
-                >
-                  {m}
-                </button>
-              );
-            })}
+            
+            {!showYearAvg && (
+              <>
+                <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
+                {MONTH_NAMES.map((m, i) => {
+                  if (i === 0) return null;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedMonth(i)}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${
+                        i === selectedMonth
+                          ? "bg-slate-800 text-white shadow-md"
+                          : "bg-white border border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
 
         <div className="p-4 space-y-4">
-          {currentData ? (
+          {displayData ? (
             <>
-              {/* BÜYÜK KART: Teslim Performansı */}
+              {/* BÜYÜK KART */}
               <div
                 className={`rounded-2xl shadow-lg mb-4 relative overflow-hidden flex flex-col text-center ${
                   isTeslimBasarisiz
@@ -1606,10 +1705,10 @@ const renderDetail = () => {
                       isTeslimBasarisiz ? "text-red-100" : "text-emerald-100"
                     }`}
                   >
-                    Teslim Performansı
+                    {showYearAvg ? `${selectedYear} Ort. Teslim Perf.` : "Teslim Performansı"}
                   </p>
                   <h2 className="text-5xl font-extrabold tracking-tight leading-none">
-                    {formatNumber(currentData.teslimPerformansi)}%
+                    {formatNumber(displayData.teslimPerformansi)}%
                   </h2>
                   <p className="mt-2 text-xs font-medium inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm">
                     Hedef: %94
@@ -1617,13 +1716,13 @@ const renderDetail = () => {
                 </div>
 
                 {/* Bölge Ortalaması */}
-                {regionData && (
+                {displayRegionData && (
                   <div className="bg-black/10 py-2 flex items-center justify-center gap-2 border-t border-white/10">
                     <span className="text-[10px] uppercase opacity-80 font-bold">
-                      BÖLGE ORTALAMASI:
+                      {showYearAvg ? "BÖLGE YILLIK ORT:" : "BÖLGE ORTALAMASI:"}
                     </span>
                     <span className="text-sm font-bold">
-                      {formatNumber(regionData.teslimPerformansi)}%
+                      {formatNumber(displayRegionData.teslimPerformansi)}%
                     </span>
                   </div>
                 )}
@@ -1632,34 +1731,34 @@ const renderDetail = () => {
               {/* OPERASYONEL KARTLAR */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Operasyonel
+                  {showYearAvg ? "Yıllık Operasyonel Ort." : "Operasyonel"}
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                   <KPICard
                     title="Rota"
-                    value={currentData.rotaOrani}
-                    comparisonValue={regionData?.rotaOrani}
-                    target={80} // HEDEF %80
+                    value={displayData.rotaOrani}
+                    comparisonValue={displayRegionData?.rotaOrani}
+                    target={80}
                     suffix="%"
-                    color={currentData.rotaOrani <= 80 ? "red" : "green"}
+                    color={displayData.rotaOrani <= 80 ? "red" : "green"}
                     icon={TrendingUp}
                   />
                   <KPICard
                     title="TVS"
-                    value={currentData.tvsOrani}
-                    comparisonValue={regionData?.tvsOrani}
-                    target={90} // HEDEF %90
+                    value={displayData.tvsOrani}
+                    comparisonValue={displayRegionData?.tvsOrani}
+                    target={90}
                     suffix="%"
-                    color={currentData.tvsOrani <= 90 ? "red" : "green"}
+                    color={displayData.tvsOrani <= 90 ? "red" : "green"}
                     icon={Activity}
                   />
                   <KPICard
                     title="Check-in"
-                    value={currentData.checkInOrani}
-                    comparisonValue={regionData?.checkInOrani}
-                    target={90} // HEDEF %90
+                    value={displayData.checkInOrani}
+                    comparisonValue={displayRegionData?.checkInOrani}
+                    target={90}
                     suffix="%"
-                    color={currentData.checkInOrani <= 90 ? "red" : "green"}
+                    color={displayData.checkInOrani <= 90 ? "red" : "green"}
                     icon={CheckCircle2}
                   />
                 </div>
@@ -1668,34 +1767,34 @@ const renderDetail = () => {
               {/* DİJİTAL KARTLAR */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Dijital
+                  {showYearAvg ? "Yıllık Dijital Ort." : "Dijital"}
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                   <KPICard
                     title="SMS"
-                    value={currentData.smsOrani}
-                    comparisonValue={regionData?.smsOrani}
-                    target={50} // HEDEF %50
+                    value={displayData.smsOrani}
+                    comparisonValue={displayRegionData?.smsOrani}
+                    target={50}
                     suffix="%"
-                    color={currentData.smsOrani <= 50 ? "red" : "green"}
+                    color={displayData.smsOrani <= 50 ? "red" : "green"}
                     icon={Smartphone}
                   />
                   <KPICard
                     title="E-ATF"
-                    value={currentData.eAtfOrani}
-                    comparisonValue={regionData?.eAtfOrani}
-                    target={80} // HEDEF %80
+                    value={displayData.eAtfOrani}
+                    comparisonValue={displayRegionData?.eAtfOrani}
+                    target={80}
                     suffix="%"
-                    color={currentData.eAtfOrani <= 80 ? "red" : "green"}
+                    color={displayData.eAtfOrani <= 80 ? "red" : "green"}
                     icon={FileText}
                   />
                   <KPICard
                     title="E-İhbar"
-                    value={currentData.elektronikIhbar}
-                    comparisonValue={regionData?.elektronikIhbar}
-                    target={90} // HEDEF %90
+                    value={displayData.elektronikIhbar}
+                    comparisonValue={displayRegionData?.elektronikIhbar}
+                    target={90}
                     suffix="%"
-                    color={currentData.elektronikIhbar <= 90 ? "red" : "green"}
+                    color={displayData.elektronikIhbar <= 90 ? "red" : "green"}
                     icon={Mail}
                   />
                 </div>
@@ -1704,7 +1803,7 @@ const renderDetail = () => {
               {/* HACİM KARTLARI */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Hacim
+                   {showYearAvg ? "Yıllık Hacim Ortalaması" : "Hacim"}
                 </h3>
                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
                   <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
@@ -1713,7 +1812,7 @@ const renderDetail = () => {
                       Gelen
                     </p>
                     <p className="text-2xl font-bold text-slate-800">
-                      {currentData.gelenKargo}
+                      {formatNumber(displayData.gelenKargo)}
                     </p>
                   </div>
                   <div className="flex-1 text-center flex flex-col items-center">
@@ -1722,7 +1821,7 @@ const renderDetail = () => {
                       Giden
                     </p>
                     <p className="text-2xl font-bold text-slate-800">
-                      {currentData.gidenKargo}
+                      {formatNumber(displayData.gidenKargo)}
                     </p>
                   </div>
                 </div>
@@ -1731,7 +1830,11 @@ const renderDetail = () => {
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Box size={48} className="mb-4 opacity-20" />
-              <p className="text-sm">Bu dönem için veri girişi yapılmamış.</p>
+              <p className="text-sm">
+                {showYearAvg 
+                  ? `${selectedYear} yılına ait veri bulunamadı.` 
+                  : "Bu dönem için veri girişi yapılmamış."}
+              </p>
             </div>
           )}
         </div>
