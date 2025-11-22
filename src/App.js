@@ -28,14 +28,16 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  User, // Yeni ikon
+  Key   // Yeni ikon
 } from "lucide-react";
 
 // --- FIREBASE IMPORTS ---
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
-  signInWithCustomToken,
-  signInAnonymously,
+  signInWithEmailAndPassword, // Yeni giriş yöntemi
+  signOut, // Çıkış yöntemi
   onAuthStateChanged,
 } from "firebase/auth";
 import {
@@ -47,7 +49,6 @@ import {
 } from "firebase/firestore";
 
 // --- FIREBASE SETUP ---
-// GitHub'da kullanacağınız gerçek yapılandırma
 const firebaseConfig = {
   apiKey: "AIzaSyAeBBWnSENJtqZrySuT5K5TKyQaypVx_Sk",
   authDomain: "yapayzekasozluk-2b59a.firebaseapp.com",
@@ -63,7 +64,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Veritabanı yolu için sabit bir ID (Verilerinizin karışmaması için)
+// Veritabanı yolu için sabit bir ID
 const appId = "kargo-takip-v1";
 
 // --- Format Helper ---
@@ -103,7 +104,7 @@ const METRIC_TYPES = [
   { id: "gidenKargo", label: "Giden Kargo", color: "green" },
 ];
 
-// --- Birim Listesi (Sabit) ---
+// --- Birim Listesi ---
 const UNITS = [
   "BÖLGE",
   "ADASAN",
@@ -268,7 +269,7 @@ const AdminPanel = ({
       handleSave();
       setPendingChanges(false);
       setLastSaved(Date.now());
-    }, 2000); // 2 saniye hareketsizlikten sonra kaydet
+    }, 2000); 
 
     return () => clearTimeout(timer);
   }, [gridData, pendingChanges]);
@@ -439,18 +440,7 @@ const AdminPanel = ({
       const newGrid = {};
       UNITS.forEach((unit) => {
         newGrid[unit] = {
-          1: "",
-          2: "",
-          3: "",
-          4: "",
-          5: "",
-          6: "",
-          7: "",
-          8: "",
-          9: "",
-          10: "",
-          11: "",
-          12: "",
+          1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
         };
       });
       setGridData(newGrid);
@@ -459,18 +449,8 @@ const AdminPanel = ({
   };
 
   const handleGlobalReset = async () => {
-    if (
-      window.confirm(
-        "⚠️ DİKKAT: Tüm veriler (Bütün yıllar, bütün birimler) kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Emin misiniz?"
-      )
-    ) {
-      if (
-        window.confirm(
-          "Son uyarı: Veritabanı tamamen sıfırlanacak. Onaylıyor musunuz?"
-        )
-      ) {
+    if (window.confirm("⚠️ DİKKAT: Tüm veriler silinecektir. Emin misiniz?")) {
         onResetAll();
-      }
     }
   };
 
@@ -481,9 +461,7 @@ const AdminPanel = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `performans_yedek_${new Date()
-      .toISOString()
-      .slice(0, 10)}.json`;
+    link.download = `performans_yedek_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -497,12 +475,10 @@ const AdminPanel = ({
       try {
         const importedData = JSON.parse(event.target.result);
         if (Array.isArray(importedData)) {
-          onSave(importedData); // Save to state & localStorage
+          onSaveBatch(importedData);
           alert("Yedek başarıyla yüklendi! Ekran güncelleniyor...");
         } else {
-          alert(
-            "Hatalı dosya formatı! Lütfen geçerli bir JSON yedek dosyası seçin."
-          );
+          alert("Hatalı dosya formatı!");
         }
       } catch (err) {
         alert("Dosya okunamadı: " + err.message);
@@ -562,7 +538,7 @@ const AdminPanel = ({
         }
       });
     });
-    onSaveBatch(updatedData); // Direct update
+    onSaveBatch(updatedData); 
   };
 
   return (
@@ -705,7 +681,7 @@ const AdminPanel = ({
       </div>
 
       {/* Excel Table */}
-      <div className="flex-1 overflow-auto bg-slate-50 select-none">
+      <div className="flex-1 overflow-auto bg-slate-5 select-none">
         <table className="w-full border-collapse text-sm bg-white">
           <thead className="bg-slate-200 sticky top-0 z-10 shadow-sm">
             <tr>
@@ -747,12 +723,12 @@ const AdminPanel = ({
                           id={`cell-${unitIndex}-${month}`}
                           type="text"
                           className={`w-full h-full p-2 text-center outline-none focus:z-10 relative transition-all text-slate-700 font-mono cursor-default
-                                                ${
-                                                  isSelected
-                                                    ? "bg-blue-200 ring-1 ring-blue-400"
-                                                    : "bg-transparent focus:ring-2 focus:ring-blue-500 focus:bg-white"
-                                                }
-                                            `}
+                                                            ${
+                                                              isSelected
+                                                                ? "bg-blue-200 ring-1 ring-blue-400"
+                                                                : "bg-transparent focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                                                            }
+                                                          `}
                           placeholder="-"
                           value={data[month] ?? ""}
                           onChange={(e) =>
@@ -788,14 +764,104 @@ const AdminPanel = ({
   );
 };
 
+// --- YENİ GİRİŞ EKRANI BİLEŞENİ ---
+const LoginScreen = ({ onLogin, loading, error }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(email, password);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-blue-600 p-8 text-center">
+          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+            <Box className="text-white" size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Performans Takip</h1>
+          <p className="text-blue-100 text-sm">Yetkili Personel Girişi</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-8 pt-10">
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">E-Posta Adresi</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="email" 
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none text-slate-800"
+                  placeholder="ornek@sirket.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Şifre</label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none text-slate-800"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full mt-8 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" /> Giriş Yapılıyor...
+              </>
+            ) : (
+              "Sisteme Giriş Yap"
+            )}
+          </button>
+          
+          <p className="mt-6 text-center text-xs text-slate-400">
+            Hesabınız yoksa yöneticiniz ile iletişime geçiniz.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// --- ANA APP UYGULAMASI ---
 export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allData, setAllData] = useState([]);
+  
+  // Auth States
   const [user, setUser] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
+  const [isSaving, setIsSaving] = useState(false);
   const [availableYears, setAvailableYears] = useState([2024, 2025, 2026]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -804,72 +870,72 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
 
-  // --- FIREBASE AUTH & LISTENER ---
+  // --- FIREBASE AUTH LISTENER ---
   useEffect(() => {
-    const initAuth = async () => {
-      // GitHub versiyonunda doğrudan anonim giriş veya sizin belirlediğiniz yöntem kullanılır
-      await signInAnonymously(auth);
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
     return () => unsubscribe();
   }, []);
 
-  // --- FIREBASE DATA LISTENER ---
+  // --- LOGIN HANDLER ---
+  const handleAppLogin = async (email, password) => {
+    setLoginLoading(true);
+    setLoginError("");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error(error);
+      let errorMessage = "Giriş yapılamadı. Bilgilerinizi kontrol edin.";
+      if (error.code === "auth/invalid-email") errorMessage = "Geçersiz e-posta formatı.";
+      if (error.code === "auth/user-not-found") errorMessage = "Kullanıcı bulunamadı.";
+      if (error.code === "auth/wrong-password") errorMessage = "Hatalı şifre.";
+      if (error.code === "auth/too-many-requests") errorMessage = "Çok fazla deneme yaptınız.";
+      if (error.code === "auth/invalid-credential") errorMessage = "Kullanıcı adı veya şifre hatalı.";
+      setLoginError(errorMessage);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleAppLogout = async () => {
+    if(window.confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+        await signOut(auth);
+        setView("dashboard");
+    }
+  };
+
+  // --- DATA LISTENER ---
   useEffect(() => {
-    if (!user) return;
-
-    // RULE 1: Use public data path
-    const dataCollection = collection(
-      db,
-      "artifacts",
-      appId,
-      "public",
-      "data",
-      "performance_records"
-    );
-
-    // Real-time listener
-    const unsubscribe = onSnapshot(
-      dataCollection,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    if (!user) {
+      setAllData([]);
+      return;
+    }
+    const dataCollection = collection(db, "artifacts", appId, "public", "data", "performance_records");
+    const unsubscribe = onSnapshot(dataCollection, (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setAllData(data);
-      },
-      (error) => {
-        console.error("Data fetch error:", error);
-      }
-    );
-
+      }, (error) => console.error("Data fetch error:", error));
     return () => unsubscribe();
   }, [user]);
 
+  // --- HELPERS ---
   const uniqueUnits = useMemo(() => UNITS, []);
-
   const filteredUnits = uniqueUnits.filter((unit) =>
     unit.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
+  
   const currentData = useMemo(() => {
     if (!selectedUnit) return null;
-    return allData.find(
-      (d) =>
-        d.unit === selectedUnit &&
-        d.year === parseInt(selectedYear) &&
-        d.month === parseInt(selectedMonth)
-    );
+    return allData.find(d => d.unit === selectedUnit && d.year === parseInt(selectedYear) && d.month === parseInt(selectedMonth));
   }, [allData, selectedUnit, selectedYear, selectedMonth]);
 
   const handleUnitClick = (unit) => {
     setSelectedUnit(unit);
     const unitData = allData.filter((d) => d.unit === unit);
     if (unitData.length > 0) {
-      const latestData = unitData.sort(
-        (a, b) => b.year - a.year || b.month - a.month
-      )[0];
+      const latestData = unitData.sort((a, b) => b.year - a.year || b.month - a.month)[0];
       if (latestData) {
         setSelectedYear(latestData.year);
         setSelectedMonth(latestData.month);
@@ -879,7 +945,7 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleLogin = () => {
+  const handleLoginForAdmin = () => {
     if (password === "admin123") {
       setShowLoginModal(false);
       setAdminOpen(true);
@@ -888,339 +954,186 @@ export default function App() {
       alert("Hatalı şifre!");
     }
   };
-
+  
   const handleSaveBatch = async (recordsToSave) => {
     if (!user) return;
     setIsSaving(true);
     try {
       const promises = recordsToSave.map((record) => {
         const cleanRecord = JSON.parse(JSON.stringify(record));
-        const docRef = doc(
-          db,
-          "artifacts",
-          appId,
-          "public",
-          "data",
-          "performance_records",
-          record.id
-        );
+        const docRef = doc(db, "artifacts", appId, "public", "data", "performance_records", record.id);
         return setDoc(docRef, cleanRecord, { merge: true });
       });
-
       await Promise.all(promises);
-    } catch (error) {
-      console.error("Save error:", error);
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (error) { console.error("Save error:", error); } finally { setIsSaving(false); }
   };
-
-  // --- MIGRATION TOOL (LOCAL -> CLOUD) ---
+  
   const handleImportLocal = () => {
     if (!user) return;
-    if (
-      !window.confirm(
-        "Tarayıcınızdaki eski (Local Storage) veriler Buluta yüklenecek. Onaylıyor musunuz?"
-      )
-    )
-      return;
-
+    if (!window.confirm("Tarayıcınızdaki eski (Local Storage) veriler Buluta yüklenecek. Onaylıyor musunuz?")) return;
     const localDataStr = localStorage.getItem("performanceData");
-    if (!localDataStr) {
-      alert("Eski veri bulunamadı!");
-      return;
-    }
-
+    if (!localDataStr) { alert("Eski veri bulunamadı!"); return; }
     try {
       const localData = JSON.parse(localDataStr);
       if (Array.isArray(localData) && localData.length > 0) {
         handleSaveBatch(localData);
-        alert(
-          `${localData.length} adet eski kayıt başarıyla buluta aktarılıyor...`
-        );
-      } else {
-        alert("Eski veri boş veya geçersiz.");
-      }
-    } catch (e) {
-      alert("Hata: " + e.message);
-    }
+        alert(`${localData.length} adet eski kayıt başarıyla buluta aktarılıyor...`);
+      } else { alert("Eski veri boş veya geçersiz."); }
+    } catch (e) { alert("Hata: " + e.message); }
   };
 
-  const handleResetAll = () => {
-    // Reset logic handled mostly manually due to restrictions
-    alert(
-      "Güvenlik sebebiyle toplu silme işlemi devre dışı. Lütfen hücreleri seçip 'Delete' tuşu ile siliniz."
-    );
-  };
+  const handleResetAll = () => { alert("Güvenlik sebebiyle devre dışı. Hücreleri seçip silebilirsiniz."); };
 
-  // --- Render Fonksiyonları ---
-
+  // --- RENDER DASHBOARD ---
   const renderDashboard = () => (
     <div className="pb-24">
-      {/* Sticky Header */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 border-b border-slate-100 px-4 py-3 shadow-sm">
         <div className="flex justify-between items-center mb-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Birimler
-            </h1>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Birimler</h1>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-slate-400">
-                {filteredUnits.length} sonuç listelendi
-              </p>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                  user
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {user ? <Wifi size={10} /> : <WifiOff size={10} />}{" "}
-                {user ? "Online" : "Bağlanıyor..."}
-              </span>
+              <p className="text-xs text-slate-500 font-mono">{user.email}</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowLoginModal(true)}
-            className="p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 flex items-center gap-2 shadow-lg shadow-slate-300"
-          >
-            <Lock size={16} />
-            <span className="text-xs font-bold hidden sm:inline">
-              Admin Girişi
-            </span>
-          </button>
+          <div className="flex gap-2">
+              <button onClick={() => setShowLoginModal(true)} className="p-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 flex items-center gap-2" title="Veri Girişi Paneli">
+                <Lock size={16} />
+                <span className="text-xs font-bold hidden sm:inline">Admin</span>
+              </button>
+              <button onClick={handleAppLogout} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 flex items-center gap-2" title="Güvenli Çıkış">
+                <LogOut size={16} />
+              </button>
+          </div>
         </div>
         <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Hızlı ara..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+          <input type="text" placeholder="Hızlı ara..." className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
       </div>
-
-      {/* Unit List */}
       <div className="px-4 mt-2">
         {filteredUnits.map((unit, index) => (
-          <div
-            key={index}
-            onClick={() => handleUnitClick(unit)}
-            className="group flex items-center justify-between p-4 mb-2 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
-          >
+          <div key={index} onClick={() => handleUnitClick(unit)} className="group flex items-center justify-between p-4 mb-2 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-blue-200 shadow-md">
                 {unit.charAt(0)}
               </div>
               <div>
-                <span className="font-semibold text-slate-800 block">
-                  {unit}
-                </span>
-                <span className="text-xs text-slate-400">
-                  Detayları görüntüle
-                </span>
+                <span className="font-semibold text-slate-800 block">{unit}</span>
+                <span className="text-xs text-slate-400">Detayları görüntüle</span>
               </div>
             </div>
-            <ChevronRight
-              className="text-slate-300 group-hover:text-blue-500 transition-colors"
-              size={20}
-            />
+            <ChevronRight className="text-slate-300 group-hover:text-blue-500 transition-colors" size={20} />
           </div>
         ))}
       </div>
     </div>
   );
 
+  // --- RENDER DETAIL ---
   const renderDetail = () => {
-    const isTeslimBasarisiz =
-      currentData && parseFloat(currentData.teslimPerformansi) < 94;
-
+    const isTeslimBasarisiz = currentData && parseFloat(currentData.teslimPerformansi) < 94;
     return (
-      <div className="pb-24 bg-slate-50 min-h-screen">
-        <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
-          <div className="px-4 py-3 flex items-center gap-3">
-            <button
-              onClick={() => setView("dashboard")}
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-full"
-            >
-              <ArrowLeft size={22} className="text-slate-600" />
-            </button>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 leading-tight">
-                {selectedUnit}
-              </h1>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
-                <Calendar size={10} />
-                <span>{selectedYear} Dönemi</span>
-              </div>
+        <div className="pb-24 bg-slate-50 min-h-screen">
+           <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
+             <div className="px-4 py-3 flex items-center gap-3">
+               <button onClick={() => setView("dashboard")} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+                 <ArrowLeft size={22} className="text-slate-600" />
+               </button>
+               <div>
+                 <h1 className="text-lg font-bold text-slate-800 leading-tight">{selectedUnit}</h1>
+                 <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Calendar size={10} /> <span>{selectedYear} Dönemi</span>
+                 </div>
+               </div>
+             </div>
+             <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
+                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-slate-100 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg border-none focus:ring-0 shrink-0">
+                    {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
+                {MONTH_NAMES.map((m, i) => {
+                    if (i === 0) return null;
+                    return (
+                    <button key={i} onClick={() => setSelectedMonth(i)} className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${i === selectedMonth ? "bg-slate-800 text-white shadow-md" : "bg-white border border-slate-200 text-slate-500"}`}>{m}</button>
+                    );
+                })}
             </div>
-          </div>
-          <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="bg-slate-100 text-slate-800 font-bold text-sm py-1.5 px-3 rounded-lg border-none focus:ring-0 shrink-0"
-            >
-              {availableYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <div className="w-[1px] h-8 bg-slate-200 shrink-0 mx-1"></div>
-            {MONTH_NAMES.map((m, i) => {
-              if (i === 0) return null;
-              const isSelected = i === selectedMonth;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedMonth(i)}
-                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all snap-center ${
-                    isSelected
-                      ? "bg-slate-800 text-white shadow-md"
-                      : "bg-white border border-slate-200 text-slate-500"
-                  }`}
-                >
-                  {m}
-                </button>
-              );
-            })}
-          </div>
+           </div>
+           
+           <div className="p-4 space-y-4">
+               {currentData ? (
+                  <>
+                    <div className={`rounded-2xl p-5 text-white shadow-lg mb-2 relative overflow-hidden ${isTeslimBasarisiz ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200" : "bg-gradient-to-br from-indigo-600 to-blue-700 shadow-indigo-200"}`}>
+                        <div className="relative z-10">
+                            <p className={`text-xs font-medium uppercase tracking-wider opacity-80 ${isTeslimBasarisiz ? "text-red-100" : "text-indigo-100"}`}>Teslim Performansı</p>
+                            <div className="flex items-end gap-2 mt-1">
+                                <h2 className="text-4xl font-bold">{formatNumber(currentData.teslimPerformansi)}%</h2>
+                                <p className={`mb-1.5 text-sm ${isTeslimBasarisiz ? "text-red-100" : "text-indigo-200"}`}>Hedef: %94</p>
+                            </div>
+                        </div>
+                        <div className="absolute -right-4 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+                    </div>
+
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Operasyonel Kalite</h3>
+                        <div className="grid grid-cols-3 gap-2">
+                            <KPICard title="Rota" value={currentData.rotaOrani} suffix="%" color={currentData.rotaOrani <= 80 ? "red" : "emerald"} icon={TrendingUp} />
+                            <KPICard title="TVS" value={currentData.tvsOrani} suffix="%" color={currentData.tvsOrani <= 90 ? "red" : "emerald"} icon={Activity} />
+                            <KPICard title="Check-in" value={currentData.checkInOrani} suffix="%" color={currentData.checkInOrani <= 90 ? "red" : "emerald"} icon={CheckCircle2} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Dijitalleşme</h3>
+                        <div className="grid grid-cols-3 gap-2">
+                            <KPICard title="SMS" value={currentData.smsOrani} suffix="%" color={currentData.smsOrani <= 50 ? "red" : "blue"} icon={Smartphone} />
+                            <KPICard title="E-ATF" value={currentData.eAtfOrani} suffix="%" color={currentData.eAtfOrani <= 80 ? "red" : "blue"} icon={FileText} />
+                            <KPICard title="Elk. İhbar" value={currentData.elektronikIhbar} suffix="%" color={currentData.elektronikIhbar <= 90 ? "red" : "blue"} icon={Mail} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">Hacim Bilgisi</h3>
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
+                            <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
+                                <Truck size={20} className="text-slate-300 mb-1" />
+                                <p className="text-xs text-slate-400 mb-1">Gelen Kargo</p>
+                                <p className="text-xl font-bold text-slate-800">{currentData.gelenKargo}</p>
+                            </div>
+                            <div className="flex-1 text-center flex flex-col items-center">
+                                <Box size={20} className="text-slate-300 mb-1" />
+                                <p className="text-xs text-slate-400 mb-1">Giden Kargo</p>
+                                <p className="text-xl font-bold text-slate-800">{currentData.gidenKargo}</p>
+                            </div>
+                        </div>
+                    </div>
+                  </>
+               ) : (
+                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                   <Box size={48} className="mb-4 opacity-20" />
+                   <p className="text-sm">Bu tarih için veri bulunamadı.</p>
+                 </div>
+               )}
+           </div>
         </div>
-
-        <div className="p-4 space-y-4">
-          {currentData ? (
-            <>
-              <div
-                className={`rounded-2xl p-5 text-white shadow-lg mb-2 relative overflow-hidden ${
-                  isTeslimBasarisiz
-                    ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
-                    : "bg-gradient-to-br from-indigo-600 to-blue-700 shadow-indigo-200"
-                }`}
-              >
-                <div className="relative z-10">
-                  <p
-                    className={`text-xs font-medium uppercase tracking-wider opacity-80 ${
-                      isTeslimBasarisiz ? "text-red-100" : "text-indigo-100"
-                    }`}
-                  >
-                    Teslim Performansı
-                  </p>
-                  <div className="flex items-end gap-2 mt-1">
-                    <h2 className="text-4xl font-bold">
-                      {formatNumber(currentData.teslimPerformansi)}%
-                    </h2>
-                    <p
-                      className={`mb-1.5 text-sm ${
-                        isTeslimBasarisiz ? "text-red-100" : "text-indigo-200"
-                      }`}
-                    >
-                      Hedef: %94
-                    </p>
-                  </div>
-                </div>
-                <div className="absolute -right-4 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Operasyonel Kalite
-                </h3>
-                <div className="grid grid-cols-3 gap-2">
-                  <KPICard
-                    title="Rota"
-                    value={currentData.rotaOrani}
-                    suffix="%"
-                    color={currentData.rotaOrani <= 80 ? "red" : "emerald"}
-                    icon={TrendingUp}
-                  />
-                  <KPICard
-                    title="TVS"
-                    value={currentData.tvsOrani}
-                    suffix="%"
-                    color={currentData.tvsOrani <= 90 ? "red" : "emerald"}
-                    icon={Activity}
-                  />
-                  <KPICard
-                    title="Check-in"
-                    value={currentData.checkInOrani}
-                    suffix="%"
-                    color={currentData.checkInOrani <= 90 ? "red" : "emerald"}
-                    icon={CheckCircle2}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Dijitalleşme
-                </h3>
-                <div className="grid grid-cols-3 gap-2">
-                  <KPICard
-                    title="SMS"
-                    value={currentData.smsOrani}
-                    suffix="%"
-                    color={currentData.smsOrani <= 50 ? "red" : "blue"}
-                    icon={Smartphone}
-                  />
-                  <KPICard
-                    title="E-ATF"
-                    value={currentData.eAtfOrani}
-                    suffix="%"
-                    color={currentData.eAtfOrani <= 80 ? "red" : "blue"}
-                    icon={FileText}
-                  />
-                  <KPICard
-                    title="Elk. İhbar"
-                    value={currentData.elektronikIhbar}
-                    suffix="%"
-                    color={currentData.elektronikIhbar <= 90 ? "red" : "blue"}
-                    icon={Mail}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
-                  Hacim Bilgisi
-                </h3>
-                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
-                  <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
-                    <Truck size={20} className="text-slate-300 mb-1" />
-                    <p className="text-xs text-slate-400 mb-1">Gelen Kargo</p>
-                    <p className="text-xl font-bold text-slate-800">
-                      {currentData.gelenKargo}
-                    </p>
-                  </div>
-                  <div className="flex-1 text-center flex flex-col items-center">
-                    <Box size={20} className="text-slate-300 mb-1" />
-                    <p className="text-xs text-slate-400 mb-1">Giden Kargo</p>
-                    <p className="text-xl font-bold text-slate-800">
-                      {currentData.gidenKargo}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-              <Box size={48} className="mb-4 opacity-20" />
-              <p className="text-sm">Bu tarih için veri bulunamadı.</p>
-            </div>
-          )}
-        </div>
-      </div>
     );
   };
 
+  // --- MAIN RENDER ---
+  if (authLoading) {
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <RefreshCw className="animate-spin text-slate-400" size={32} />
+        </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={handleAppLogin} loading={loginLoading} error={loginError} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 safe-area-pb">
-      {/* Admin Modal */}
       {isAdminOpen && (
         <AdminPanel
           allData={allData}
@@ -1235,36 +1148,17 @@ export default function App() {
         />
       )}
 
-      {/* Login Modal */}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Lock className="text-slate-800" /> Yönetici Girişi
+              <Lock className="text-slate-800" /> Veri Girişi Yetkisi
             </h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Lütfen giriş şifresini giriniz. (Şifre: admin123)
-            </p>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Şifre"
-            />
+            <p className="text-sm text-slate-500 mb-4">Düzenleme yapmak için düzenleme şifresini giriniz.</p>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Düzenleme Şifresi" />
             <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg"
-              >
-                İptal
-              </button>
-              <button
-                onClick={handleLogin}
-                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
-              >
-                Giriş Yap
-              </button>
+              <button onClick={() => setShowLoginModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">İptal</button>
+              <button onClick={handleLoginForAdmin} className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700">Giriş Yap</button>
             </div>
           </div>
         </div>
