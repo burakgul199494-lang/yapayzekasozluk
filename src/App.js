@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   ArrowLeft,
+  ChevronDown, // <--- BUNU EKLE
   Calendar,
   AlertCircle,
   ChevronRight,
@@ -1456,20 +1457,38 @@ const renderDetail = () => {
 
     return (
       <div className="pb-24 bg-slate-50 min-h-screen">
-        {/* Header Kısmı */}
+        {/* --- HEADER KISMI (GÜNCELLENDİ) --- */}
         <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100">
           <div className="px-4 py-3 flex items-center gap-3">
             <button
               onClick={() => setView("dashboard")}
-              className="p-2 -ml-2 hover:bg-slate-100 rounded-full"
+              className="p-2 -ml-2 hover:bg-slate-100 rounded-full flex-shrink-0"
             >
               <ArrowLeft size={22} className="text-slate-600" />
             </button>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 leading-tight">
-                {selectedUnit}
-              </h1>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
+            
+            {/* Burası artık statik bir yazı değil, birim değiştirme alanı */}
+            <div className="flex-1 min-w-0">
+              <div className="relative flex items-center w-full max-w-[250px]">
+                <select
+                  value={selectedUnit}
+                  onChange={(e) => handleUnitClick(e.target.value)}
+                  className="appearance-none bg-transparent text-lg font-bold text-slate-800 w-full pr-8 outline-none cursor-pointer truncate py-1 z-10"
+                >
+                  {UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+                {/* Ok ikonu */}
+                <ChevronDown 
+                  size={18} 
+                  className="absolute right-0 text-slate-400 pointer-events-none" 
+                />
+              </div>
+              
+              <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
                 <Calendar size={10} />{" "}
                 <span>
                   {selectedYear} Dönemi - {MONTH_NAMES[selectedMonth]}
@@ -1477,7 +1496,8 @@ const renderDetail = () => {
               </div>
             </div>
           </div>
-          {/* Tarih Seçimi */}
+
+          {/* Tarih Seçimi (Aynı kaldı) */}
           <div className="pl-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar snap-x">
             <select
               value={selectedYear}
@@ -1513,13 +1533,12 @@ const renderDetail = () => {
         <div className="p-4 space-y-4">
           {currentData ? (
             <>
-              {/* BÜYÜK KART: Teslim Performansı */}
+              {/* BÜYÜK KART: Teslim Performansı (Yeşil Tasarım) */}
               <div
                 className={`rounded-2xl p-6 text-white shadow-lg mb-4 relative overflow-hidden flex flex-col items-center justify-center text-center ${
                   isTeslimBasarisiz
                     ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-200"
-                    : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200" 
-                    // YUKARIDAKİ SATIR: Mavi yerine Yeşil (Emerald/Green) gradient yapıldı.
+                    : "bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-200"
                 }`}
               >
                 <div className="relative z-10">
@@ -1534,13 +1553,7 @@ const renderDetail = () => {
                     <h2 className="text-5xl font-extrabold tracking-tight">
                       {formatNumber(currentData.teslimPerformansi)}%
                     </h2>
-                    <p
-                      className={`mt-2 text-sm font-medium px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm ${
-                        isTeslimBasarisiz
-                          ? "text-white"
-                          : "text-white"
-                      }`}
-                    >
+                    <p className="mt-2 text-sm font-medium px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white">
                       Hedef: %94
                     </p>
                   </div>
@@ -1557,7 +1570,6 @@ const renderDetail = () => {
                     title="Rota"
                     value={currentData.rotaOrani}
                     suffix="%"
-                    // Başarılı ise 'green', değilse 'red'
                     color={currentData.rotaOrani <= 80 ? "red" : "green"}
                     icon={TrendingUp}
                   />
@@ -1578,7 +1590,7 @@ const renderDetail = () => {
                 </div>
               </div>
 
-              {/* DİJİTAL KARTLAR (SMS vb.) */}
+              {/* DİJİTAL KARTLAR */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Dijital
@@ -1588,7 +1600,6 @@ const renderDetail = () => {
                     title="SMS"
                     value={currentData.smsOrani}
                     suffix="%"
-                    // ESKİDEN BLUE İDİ, ŞİMDİ GREEN YAPTIK
                     color={currentData.smsOrani <= 50 ? "red" : "green"}
                     icon={Smartphone}
                   />
@@ -1609,7 +1620,7 @@ const renderDetail = () => {
                 </div>
               </div>
 
-              {/* HACİM KARTLARI (Bunları beyaz bırakıyoruz veya isteğe göre boyayabiliriz) */}
+              {/* HACİM KARTLARI */}
               <div>
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 pl-1">
                   Hacim
@@ -1617,14 +1628,18 @@ const renderDetail = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center gap-4">
                   <div className="flex-1 text-center border-r border-slate-100 flex flex-col items-center">
                     <Truck size={24} className="text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">Gelen</p>
+                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">
+                      Gelen
+                    </p>
                     <p className="text-2xl font-bold text-slate-800">
                       {currentData.gelenKargo}
                     </p>
                   </div>
                   <div className="flex-1 text-center flex flex-col items-center">
                     <Box size={24} className="text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">Giden</p>
+                    <p className="text-xs text-slate-400 mb-1 font-bold uppercase">
+                      Giden
+                    </p>
                     <p className="text-2xl font-bold text-slate-800">
                       {currentData.gidenKargo}
                     </p>
