@@ -1,11 +1,37 @@
 // --- PART 1: IMPORTS, FIREBASE CONFIG, CONSTANTS, HELPERS ---
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Search, ArrowLeft, Calendar, AlertCircle, ChevronRight, TrendingUp,
-  Box, Activity, CheckCircle2, Truck, Smartphone, Mail, FileText, Lock, Save,
-  LogOut, Grid, Plus, Trash2, RotateCcw, Layers,
-  RefreshCw, User, Key, UserCog, X, Home, FilePlus, MessageSquare, Eye
+  Search,
+  ArrowLeft,
+  Calendar,
+  AlertCircle,
+  ChevronRight,
+  TrendingUp,
+  Box,
+  Activity,
+  CheckCircle2,
+  Truck,
+  Smartphone,
+  Mail,
+  FileText,
+  Lock,
+  Save,
+  LogOut,
+  Grid,
+  Plus,
+  Trash2,
+  RotateCcw,
+  Layers,
+  RefreshCw,
+  User,
+  Key,
+  UserCog,
+  X,
+  Home,
+  FilePlus,
+  MessageSquare,
+  Eye,
 } from "lucide-react";
 
 // --- FIREBASE IMPORTS ---
@@ -22,14 +48,14 @@ import {
   getFirestore,
   collection,
   doc,
-  setDoc,
   addDoc,
   deleteDoc,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  getDocs,
 } from "firebase/firestore";
 
 // --- FIREBASE SETUP ---
@@ -49,14 +75,14 @@ const db = getFirestore(app);
 const appId = "kargo-takip-v1";
 
 // --- HELPERS ---
-export const formatNumber = (num) => {
+const formatNumber = (num) => {
   if (num === undefined || num === null || num === "") return "-";
   const n = parseFloat(num);
   if (isNaN(n)) return "-";
   return n.toFixed(2).replace(".", ",");
 };
 
-export const formatDate = (timestamp) => {
+const formatDate = (timestamp) => {
   if (!timestamp) return "";
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   return (
@@ -66,9 +92,23 @@ export const formatDate = (timestamp) => {
   );
 };
 
-export const MONTH_NAMES = ["", "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const MONTH_NAMES = [
+  "",
+  "Oca",
+  "Şub",
+  "Mar",
+  "Nis",
+  "May",
+  "Haz",
+  "Tem",
+  "Ağu",
+  "Eyl",
+  "Eki",
+  "Kas",
+  "Ara",
+];
 
-export const METRIC_TYPES = [
+const METRIC_TYPES = [
   { id: "teslimPerformansi", label: "Teslim Perf. %", color: "blue" },
   { id: "rotaOrani", label: "Rota Oranı %", color: "indigo" },
   { id: "tvsOrani", label: "TVS Oranı %", color: "indigo" },
@@ -80,17 +120,76 @@ export const METRIC_TYPES = [
   { id: "gidenKargo", label: "Giden Kargo", color: "green" },
 ];
 
-export const UNITS = [
-  "BÖLGE", "ADASAN", "ADATEPE", "ALAÇATI", "ARMUTALAN", "ASTİM", "AYDIN DDN", "AYRANCILAR", "BELDİBİ", "BELEN",
-  "ÇAMKÖY", "ÇEŞME", "ÇİNE", "DALAMAN", "DATÇA", "DAVUTLAR", "DİDİM", "DOKUZEYLÜL", "EFELER", "EGESER",
-  "FETHİYE", "GÖCEK", "GÖLKÖY", "GÜMÜŞLÜK", "GÜNDOĞAN", "GÜVERCİNLİK", "HALİKARNAS", "KALABAK DDN", "KARYA",
-  "KAYMAKKUYU", "KISIKKÖY", "KONACIK", "KÖTEKLİ", "KÖYCEĞİZ", "KUŞADASI", "LİKYA", "LİMANTEPE İRT", "LODOS DDN",
-  "MARMARİS İRT", "MENDERES", "MİLAS", "MORDOĞAN", "MUMCULAR", "NAZİLLİ", "NYSA", "ORTACA", "ORTAKENT", "ÖDEMİŞ",
-  "RÜZGAR", "SARNIÇ", "SELÇUK", "SÖKE", "ŞİRİNYER", "TEPEKÖY", "TINAZTEPE", "TİRE", "TORBA DDN", "TORBALI",
-  "TURGUTREİS", "UMURBEY", "URLA", "ÜÇGÖZLER", "YALIKAVAK", "YATAĞAN", "YELKEN", "YENİGÜN", "YENİHİSAR", "ZEYBEK",
+const UNITS = [
+  "BÖLGE",
+  "ADASAN",
+  "ADATEPE",
+  "ALAÇATI",
+  "ARMUTALAN",
+  "ASTİM",
+  "AYDIN DDN",
+  "AYRANCILAR",
+  "BELDİBİ",
+  "BELEN",
+  "ÇAMKÖY",
+  "ÇEŞME",
+  "ÇİNE",
+  "DALAMAN",
+  "DATÇA",
+  "DAVUTLAR",
+  "DİDİM",
+  "DOKUZEYLÜL",
+  "EFELER",
+  "EGESER",
+  "FETHİYE",
+  "GÖCEK",
+  "GÖLKÖY",
+  "GÜMÜŞLÜK",
+  "GÜNDOĞAN",
+  "GÜVERCİNLİK",
+  "HALİKARNAS",
+  "KALABAK DDN",
+  "KARYA",
+  "KAYMAKKUYU",
+  "KISIKKÖY",
+  "KONACIK",
+  "KÖTEKLİ",
+  "KÖYCEĞİZ",
+  "KUŞADASI",
+  "LİKYA",
+  "LİMANTEPE İRT",
+  "LODOS DDN",
+  "MARMARİS İRT",
+  "MENDERES",
+  "MİLAS",
+  "MORDOĞAN",
+  "MUMCULAR",
+  "NAZİLLİ",
+  "NYSA",
+  "ORTACA",
+  "ORTAKENT",
+  "ÖDEMİŞ",
+  "RÜZGAR",
+  "SARNIÇ",
+  "SELÇUK",
+  "SÖKE",
+  "ŞİRİNYER",
+  "TEPEKÖY",
+  "TINAZTEPE",
+  "TİRE",
+  "TORBA DDN",
+  "TORBALI",
+  "TURGUTREİS",
+  "UMURBEY",
+  "URLA",
+  "ÜÇGÖZLER",
+  "YALIKAVAK",
+  "YATAĞAN",
+  "YELKEN",
+  "YENİGÜN",
+  "YENİHİSAR",
+  "ZEYBEK",
 ];
-
-// PART 1 SONU — PART 2'DE: AdminPanel component'i başlıyor
 // --- PART 2: KPICard & AdminPanel ---
 
 const KPICard = ({ title, value, suffix = "", color = "slate", icon: Icon }) => (
@@ -145,7 +244,7 @@ const AdminPanel = ({
 
   const MONTH_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  // Veriyi grid'e yükle
+  // Firestore'dan gelen veriyi grid'e dağıt
   useEffect(() => {
     const newGrid = {};
     UNITS.forEach((unit) => {
@@ -164,7 +263,7 @@ const AdminPanel = ({
     setPendingChanges(false);
   }, [selectedYear, selectedMetric, allData]);
 
-  // Global mouse up (seçimi bırakmak için)
+  // Mouse up - seçim bırakma
   useEffect(() => {
     const handleWindowMouseUp = () => {
       if (selection.isDragging)
@@ -329,7 +428,7 @@ const AdminPanel = ({
     }
   };
 
-  // --- KAYDET: SADECE DOLU HÜCRELER + GERÇEK YAZMA SONRASI MESAJ ---
+  // --- KAYDET: sadece dolu hücreler toplanır, batch'e gönderilir ---
   const handleSave = async () => {
     let recordsToUpdate = [];
 
@@ -337,11 +436,9 @@ const AdminPanel = ({
       const unitRow = gridData[unit] || {};
       MONTH_INDICES.forEach((month) => {
         const rawValue = unitRow[month];
-
         if (rawValue === undefined || rawValue === null) return;
 
         const cleanStr = String(rawValue).trim().replace(",", ".");
-
         if (cleanStr === "" || cleanStr.toLowerCase() === "undefined") return;
 
         const parsed = parseFloat(cleanStr);
@@ -351,13 +448,10 @@ const AdminPanel = ({
           ? Math.round(parsed)
           : Number(parsed.toFixed(2));
 
-        const docId = `${unit}-${selectedYear}-${month}`;
-
         const record = {
-          id: docId,
-          unit: unit,
+          unit,
           year: parseInt(selectedYear),
-          month: month,
+          month,
           [selectedMetric]: finalValue,
         };
 
@@ -371,7 +465,7 @@ const AdminPanel = ({
     }
 
     try {
-      await onSaveBatch(recordsToUpdate); // 🔥 Batch işlemi burada
+      await onSaveBatch(recordsToUpdate); // gerçek kayıt burada
       setPendingChanges(false);
       alert("Veriler başarıyla kaydedildi.");
     } catch (error) {
@@ -820,7 +914,7 @@ const LandingMenu = ({ onNavigate, user, onLogout, onProfile }) => {
           </div>
           <div
             onClick={() => onNavigate("dashboard")}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex flex-col items-center text-center"
+            className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group flex felx-col items-center text-center"
           >
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
               <Activity
@@ -872,7 +966,7 @@ const UserProfileModal = ({ user, onClose }) => {
     setMessage({ type: "", text: "" });
     try {
       if (displayName !== user.displayName) {
-        await updateProfile(user, { displayName: displayName });
+        await updateProfile(user, { displayName });
       }
       if (newPassword) {
         if (newPassword.length < 6)
@@ -1045,7 +1139,7 @@ const LoginScreen = ({ onLogin, loading, error }) => {
     </div>
   );
 };
-// --- PART 4: MAIN APP (BATCH SAVE DAHİL) ---
+// --- PART 4: MAIN APP (YENİ FIRESTORE PATH + BATCH CHUNK) ---
 
 export default function App() {
   const [view, setView] = useState("menu");
@@ -1072,7 +1166,7 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [password, setPassword] = useState("");
 
-  // Mobil zoom fix
+  // MOBIL ZOOM FIX
   useEffect(() => {
     const meta = document.querySelector('meta[name="viewport"]');
     if (meta) {
@@ -1097,6 +1191,7 @@ export default function App() {
     }
   }, []);
 
+  // AUTH STATE
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -1126,29 +1221,61 @@ export default function App() {
     }
   };
 
-  // Firestore veri çekme
+  // --- YENİ FIRESTORE OKUMA ---
+  // performance_records / {year} / {unit} / {month}
   useEffect(() => {
     if (!user) {
       setAllData([]);
       return;
     }
+
     setDataLoading(true);
-    const unsubscribe = onSnapshot(
-      collection(
-        db,
-        "artifacts",
-        appId,
-        "public",
-        "data",
-        "performance_records"
-      ),
-      (snap) => {
-        setAllData(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+    const loadAllData = async () => {
+      try {
+        const yearsToLoad = availableYears;
+
+        const all = [];
+
+        for (const year of yearsToLoad) {
+          const yearCol = collection(db, "performance_records", String(year));
+          const yearSnap = await getDocs(yearCol);
+
+          // year altında unit doc'ları var; her birinin altında month alt koleksiyonu
+          const unitDocs = yearSnap.docs;
+
+          for (const unitDoc of unitDocs) {
+            const unitName = unitDoc.id;
+            const monthsCol = collection(
+              db,
+              "performance_records",
+              String(year),
+              unitName
+            );
+            const monthsSnap = await getDocs(monthsCol);
+            monthsSnap.forEach((mDoc) => {
+              const data = mDoc.data();
+              all.push({
+                id: `${year}-${unitName}-${mDoc.id}`,
+                unit: unitName,
+                year: Number(year),
+                month: Number(mDoc.id),
+                ...data,
+              });
+            });
+          }
+        }
+
+        setAllData(all);
+      } catch (e) {
+        console.error("Load data error:", e);
+      } finally {
         setDataLoading(false);
       }
-    );
-    return () => unsubscribe();
-  }, [user]);
+    };
+
+    loadAllData();
+  }, [user, availableYears]);
 
   const uniqueUnits = useMemo(() => UNITS, []);
   const filteredUnits = uniqueUnits.filter((unit) =>
@@ -1212,29 +1339,32 @@ export default function App() {
     }
   };
 
-  // 🔥 BATCH SAVE: quota hatasını çözen kısım
+  // --- YENİ BATCH SAVE: performance_records / year / unit / month ---
   const handleSaveBatch = async (records) => {
     setIsSaving(true);
     try {
-      const batch = writeBatch(db);
+      // 1 batch max 500 write, biz güvenli olsun diye 400'lük parçalar yapıyoruz
+      const chunkSize = 400;
+      for (let i = 0; i < records.length; i += chunkSize) {
+        const chunk = records.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
 
-      records.forEach((r) => {
-        const ref = doc(
-          db,
-          "artifacts",
-          appId,
-          "public",
-          "data",
-          "performance_records",
-          r.id
-        );
-        batch.set(ref, { ...r }, { merge: true });
-      });
+        chunk.forEach((r) => {
+          const ref = doc(
+            db,
+            "performance_records",
+            String(r.year),
+            r.unit,
+            String(r.month)
+          );
+          batch.set(ref, { ...r }, { merge: true });
+        });
 
-      await batch.commit(); // tek istekte hepsini yazar
+        await batch.commit();
+      }
     } catch (e) {
       console.error("BATCH SAVE ERROR:", e);
-      throw e; // AdminPanel catch edebilsin
+      throw e;
     } finally {
       setIsSaving(false);
     }
@@ -1556,7 +1686,7 @@ export default function App() {
 
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Lock className="text-slate-800" /> Admin Yetkisi
             </h3>
